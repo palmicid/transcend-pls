@@ -45,6 +45,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules ./node_modules
 
 # Create a startup script that runs migrations
 COPY <<'EOF' /app/start.sh
@@ -63,4 +64,7 @@ RUN chmod +x /app/start.sh
 USER nextjs
 
 EXPOSE 3000
-CMD ["npm", "start"]
+# CMD ["npm", "start"]
+# CMD ["node", "./node_modules/.bin/next", "start"]
+CMD ["npm", "run", "start"]
+# CMD ["npm", "run", "dev"]
