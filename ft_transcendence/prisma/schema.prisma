@@ -5,35 +5,83 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+// =============================================================================
+// USER MODEL (prioritized from ft_transcendence, extended with game fields)
+// =============================================================================
+
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int          @id @default(autoincrement())
+  email       String       @unique @db.VarChar(255)
+  name        String?      @db.VarChar(255)
+  username    String?      @unique @db.VarChar(255)
+  displayName String?      @db.VarChar(255)
+  password    String?      @db.VarChar(255)
+  online      Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  rooms       Room[]
+  gameResults GameResult[]
 }
 
+// =============================================================================
+// CHAT MODELS (from ft_transcendence - LLM features)
+// =============================================================================
+
 model ChatSession {
-  id        Int      @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   userId    Int?
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
   messages  ChatMessage[]
 }
 
 model ChatMessage {
-  id        Int      @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   sessionId Int
-  role      String   // "user" | "assistant"
+  role      String // "user" | "assistant"
   content   String
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id])
+}
 
-  session ChatSession @relation(fields: [sessionId], references: [id])
+// =============================================================================
+// GAME MODELS (from server - game lobby features)
+// =============================================================================
+
+model Room {
+  id          Int          @id @default(autoincrement())
+  name        String       @db.VarChar(255)
+  type        RoomType
+  maxUsers    Int
+  members     User[]
+  gameResults GameResult[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model GameResult {
+  id         Int      @id @default(autoincrement())
+  roomId     Int
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  gameType   String   @db.VarChar(100)
+  winnerId   Int?
+  winner     User?    @relation(fields: [winnerId], references: [id], onDelete: SetNull)
+  resultData Json? // Store game-specific results as JSON
+  durationMs Int // Game duration in milliseconds
+  createdAt  DateTime @default(now())
+}
+
+enum RoomType {
+  GENERIC
+  SUDOKU
+  TIC_TAC_TOE
+  PONG
 }
