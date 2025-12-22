@@ -24,9 +24,6 @@ export function RoomsList({ rooms }: { rooms: RoomLite[] }) {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-semibold tracking-tight">Rooms</h2>
-          <p className="text-sm text-white/60 mt-1">
-            ล่าสุดจาก seed / database ของคุณ
-          </p>
         </div>
       </div>
 
