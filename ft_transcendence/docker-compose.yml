@@ -1,3 +1,6 @@
+# Base docker-compose configuration
+# Use with overlays: docker-compose.dev.yml, docker-compose.prod.yml, docker-compose.ollama.yml
+
 services:
   web:
     container_name: nextjs-app
@@ -23,17 +26,5 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  ollama:
-    container_name: ollama
-    build: ./ollama
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_MODEL=llama3
-    volumes:
-      - ollama:/root/.ollama
-    restart: unless-stopped
-
 volumes:
   postgres_data:
-  ollama:
