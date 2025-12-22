@@ -26,7 +26,7 @@ export default async function MainPage() {
   const userLabel = me.displayName ?? me.username ?? me.email ?? "User";
 
   return (
-    <MainLayout userLabel={userLabel} showNav={true}>
+    <MainLayout showNav={true}>
       <HeroHeader userLabel={userLabel} />
 
       {/* Center 3 cards */}

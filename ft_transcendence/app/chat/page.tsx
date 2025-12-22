@@ -15,10 +15,8 @@ export default async function ChatPage() {
   const me = await prisma.user.findUnique({ where: { id: Number(userId) } });
   if (!me) redirect("/login");
 
-  const userLabel = me.displayName ?? me.username ?? me.email ?? "User";
-
   return (
-    <MainLayout userLabel={userLabel} showNav>
+    <MainLayout showNav={true}>
       <LLMChatApp />
     </MainLayout>
   );

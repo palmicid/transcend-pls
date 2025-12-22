@@ -18,10 +18,8 @@ export default async function ProfilePage() {
 
   if (!me) redirect("/login");
 
-  const userLabel = me.displayName ?? me.username ?? me.email ?? "User";
-
   return (
-    <MainLayout userLabel={userLabel} showNav>
+    <MainLayout showNav={true}>
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Profile</h1>

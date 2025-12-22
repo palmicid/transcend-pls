@@ -3,11 +3,11 @@ import { MainNavbar } from "./MainNavbar";
 import { MainFooter } from "@/components/layout/MainFooter";
 
 export function MainLayout({
-  userLabel,
+  // userLabel,
   children,
   showNav = true,
 }: {
-  userLabel?: string;
+  // userLabel?: string;
   children: ReactNode;
   showNav?: boolean;
 }) {
@@ -21,8 +21,8 @@ export function MainLayout({
       </div>
 
       {/* Navbar */}
-      {showNav ? <MainNavbar userLabel={userLabel ?? "User"} /> : null}
-      
+      {showNav ? <MainNavbar /> : null}
+
       {/* Main content */}
       <main
         className={`flex-1 px-4 sm:px-6 lg:px-8 ${

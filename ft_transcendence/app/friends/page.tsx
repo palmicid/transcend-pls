@@ -15,9 +15,6 @@ export default async function FriendsPage() {
   const me = await prisma.user.findUnique({ where: { id: Number(userId) } });
   if (!me) redirect("/login");
 
-  const userLabel = me.displayName ?? me.username ?? me.email ?? "User";
-
-  // ดึง users ทั้งหมดเพื่อโชว์ online/offline และใช้ค้นหา
   const users = await prisma.user.findMany({
     orderBy: { id: "asc" },
     select: {
@@ -30,7 +27,7 @@ export default async function FriendsPage() {
   });
 
   return (
-    <MainLayout userLabel={userLabel} showNav>
+    <MainLayout showNav={true}>
       <FriendsClient meId={me.id} users={users} />
     </MainLayout>
   );
