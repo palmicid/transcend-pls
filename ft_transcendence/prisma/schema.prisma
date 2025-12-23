@@ -7,81 +7,91 @@
 generator client {
   provider      = "prisma-client-js"
   output        = "../node_modules/.prisma/client"
-  binaryTargets = ["native", "linux-musl"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// =============================================================================
-// USER MODEL (prioritized from ft_transcendence, extended with game fields)
-// =============================================================================
 
-model User {
-  id          Int          @id @default(autoincrement())
-  email       String       @unique @db.VarChar(255)
-  name        String?      @db.VarChar(255)
-  username    String?      @unique @db.VarChar(255)
-  displayName String?      @db.VarChar(255)
-  password    String?      @db.VarChar(255)
-  online      Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  rooms       Room[]
-  gameResults GameResult[]
+model Users {
+  uid              Int              @id @default(autoincrement())
+  username         String           @unique
+  email            String           @unique
+  password         String
+  avatar_url       String           @default("") //default pic here
+  online_status    Boolean          @default(false)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+
+  // Google Auth Relation
+  googleAuth      google_auth?     @relation("GoogleAuth")
+
+  // Relations
+  sentRequests     FriendRelation[]  @relation("SentRequests")
+  receivedRequests FriendRelation[]  @relation("ReceivedRequests")
+
+  // Relations for Tic Tac Toe
+  ttt_player1      game_ttt[]       @relation("Player1")
+  ttt_player2      game_ttt[]       @relation("Player2")
+  ttt_winner       game_ttt[]       @relation("Winner")
+
+  // Relations for Rock Paper Scissors
+  rps_player1      game_rps[]       @relation("Player1")
+  rps_player2      game_rps[]       @relation("Player2")
+  rps_winner       game_rps[]       @relation("Winner")
 }
 
-// =============================================================================
-// CHAT MODELS (from ft_transcendence - LLM features)
-// =============================================================================
+// Friendships Model
+model FriendRelation {
+  id               Int              @id @default(autoincrement())
+  
+  user_id          Int
+  sender           Users            @relation("SentRequests", fields: [user_id], references: [uid])
+  
+  friend_id        Int
+  friend           Users            @relation("ReceivedRequests", fields: [friend_id], references: [uid])
 
-model ChatSession {
-  id        Int           @id @default(autoincrement())
-  userId    Int?
-  createdAt DateTime      @default(now())
-  messages  ChatMessage[]
+  is_accepted      Boolean          @default(false)
+  created_at       DateTime         @default(now())
+
+
+
+  @@unique([user_id, friend_id])
 }
 
-model ChatMessage {
-  id        Int         @id @default(autoincrement())
-  sessionId Int
-  role      String // "user" | "assistant"
-  content   String
-  createdAt DateTime    @default(now())
-  session   ChatSession @relation(fields: [sessionId], references: [id])
+// Tic Tac Toe Game Model
+model game_ttt {
+  id               Int              @id @default(autoincrement())
+  player1_id       Int
+  player1          Users            @relation("Player1", fields: [player1_id], references: [uid])
+  player2_id       Int
+  player2          Users            @relation("Player2", fields: [player2_id], references: [uid])
+  winner_id        Int?
+  winner           Users?           @relation("Winner", fields: [winner_id], references: [uid])
+  created_at       DateTime         @default(now())
 }
 
-// =============================================================================
-// GAME MODELS (from server - game lobby features)
-// =============================================================================
-
-model Room {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(255)
-  type        RoomType
-  maxUsers    Int
-  members     User[]
-  gameResults GameResult[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+// Rock Paper Scissors Game Model
+model game_rps {
+  id               Int              @id @default(autoincrement())
+  player1_id       Int
+  player1          Users            @relation("Player1", fields: [player1_id], references: [uid])
+  player2_id       Int
+  player2          Users            @relation("Player2", fields: [player2_id], references: [uid])
+  winner_id        Int?
+  winner           Users?           @relation("Winner", fields: [winner_id], references: [uid])
+  created_at       DateTime         @default(now())
 }
 
-model GameResult {
-  id         Int      @id @default(autoincrement())
-  roomId     Int
-  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  gameType   String   @db.VarChar(100)
-  winnerId   Int?
-  winner     User?    @relation(fields: [winnerId], references: [id], onDelete: SetNull)
-  resultData Json? // Store game-specific results as JSON
-  durationMs Int // Game duration in milliseconds
-  createdAt  DateTime @default(now())
-}
-
-enum RoomType {
-  GENERIC
-  SUDOKU
-  TIC_TAC_TOE
-  PONG
+// Google Authentication Model
+model google_auth {
+  google_id       String           @id
+  email           String           @unique
+  refresh_token   String
+  access_token    String
+  granted_scopes  String
+  expiry_date     DateTime
+  user_id         Int             @unique
+  user            Users           @relation("GoogleAuth", fields: [user_id], references: [uid])
 }
