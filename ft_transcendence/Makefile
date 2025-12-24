@@ -246,6 +246,10 @@ typecheck: ## Run TypeScript type checking
 	@echo "$(GREEN)📝 Running type checker...$(RESET)"
 	npm run typecheck
 
+.PHONY: secret-gen
+secret-gen:
+	@node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
 # ============================================================================
 # Local Development (without Docker)
 # ============================================================================
