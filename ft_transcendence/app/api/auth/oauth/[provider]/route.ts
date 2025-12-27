@@ -10,7 +10,7 @@ const PROVIDER_TO_EMAIL: Record<string, string> = {
 };
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ provider: string }> }
 ) {
   const { provider } = await params;
@@ -24,22 +24,32 @@ export async function GET(
       prompt: "consent",
       scope: "openid email profile",
     };
-
+    const qs = new URLSearchParams(options);
+    return NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
+  }
+  // else if (provider === 'github') {
+  else {
+    const rootUrl = "https://github.com/login/oauth/authorize";
+    const options = {
+      redirect_uri: process.env.GITHUB_REDIRECT_URI!,
+      client_id: process.env.GITHUB_CLIENT_ID!,
+      scope: "user:email",
+    };
     const qs = new URLSearchParams(options);
     return NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
   }
 
-  const email = PROVIDER_TO_EMAIL[provider];
+  // const email = PROVIDER_TO_EMAIL[provider];
 
-  if (!email) {
-    return NextResponse.redirect(new URL("/login?error=unknown_provider", _req.url));
-  }
+  // if (!email) {
+  //   return NextResponse.redirect(new URL("/login?error=unknown_provider", _req.url));
+  // }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return NextResponse.redirect(new URL("/login?error=user_not_seeded", _req.url));
-  }
+  // const user = await prisma.user.findUnique({ where: { email } });
+  // if (!user) {
+  //   return NextResponse.redirect(new URL("/login?error=user_not_seeded", _req.url));
+  // }
 
-  await setUserId(String(user.id));
-  return NextResponse.redirect(new URL("/main", _req.url));
+  // await setUserId(String(user.id));
+  // return NextResponse.redirect(new URL("/main", _req.url));
 }
