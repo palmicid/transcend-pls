@@ -14,9 +14,11 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> }
 ) {
   const { provider } = await params;
+  let rootUrl: string;
+  let options: Record<string, string>;
   if (provider === 'google') {
-    const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
-    const options = {
+    rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+    options = {
       redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
       client_id: process.env.GOOGLE_CLIENT_ID!,
       access_type: "offline",
@@ -24,20 +26,26 @@ export async function GET(
       prompt: "consent",
       scope: "openid email profile",
     };
-    const qs = new URLSearchParams(options);
-    return NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
+    
   }
-  // else if (provider === 'github') {
+  else if (provider === '42') {
+    rootUrl = "https://api.intra.42.fr/oauth/authorize";
+    options = {
+      client_id: process.env.FTBK_CLIENT_ID!,
+      redirect_uri: process.env.FTBK_REDIRECT_URI!,
+      response_type: "code",
+    };
+  }
   else {
-    const rootUrl = "https://github.com/login/oauth/authorize";
-    const options = {
+    rootUrl = "https://github.com/login/oauth/authorize";
+    options = {
       redirect_uri: process.env.GITHUB_REDIRECT_URI!,
       client_id: process.env.GITHUB_CLIENT_ID!,
       scope: "user:email",
     };
-    const qs = new URLSearchParams(options);
-    return NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
   }
+  const qs = new URLSearchParams(options);
+  return NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
 
   // const email = PROVIDER_TO_EMAIL[provider];
 
