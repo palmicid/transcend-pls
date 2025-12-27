@@ -14,32 +14,32 @@ datasource db {
 }
 
 
-model Users {
-  uid              Int              @id @default(autoincrement())
+model User {
+  id               Int              @id @default(autoincrement())
   username         String           @unique
   email            String           @unique
-  password         String
+  hashedPassword   String
   avatar_url       String           @default("") //default pic here
   online_status    Boolean          @default(false)
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
 
   // Google Auth Relation
-  googleAuth      google_auth?     @relation("GoogleAuth")
+  googleAuth      Google_auth?     @relation("GoogleAuth")
 
   // Relations
   sentRequests     FriendRelation[]  @relation("SentRequests")
   receivedRequests FriendRelation[]  @relation("ReceivedRequests")
 
   // Relations for Tic Tac Toe
-  ttt_player1      game_ttt[]       @relation("Player1")
-  ttt_player2      game_ttt[]       @relation("Player2")
-  ttt_winner       game_ttt[]       @relation("Winner")
+  ttt_player1      Game_ttt[]       @relation("Player1")
+  ttt_player2      Game_ttt[]       @relation("Player2")
+  ttt_winner       Game_ttt[]       @relation("Winner")
 
   // Relations for Rock Paper Scissors
-  rps_player1      game_rps[]       @relation("Player1")
-  rps_player2      game_rps[]       @relation("Player2")
-  rps_winner       game_rps[]       @relation("Winner")
+  rps_player1      Game_rps[]       @relation("Player1")
+  rps_player2      Game_rps[]       @relation("Player2")
+  rps_winner       Game_rps[]       @relation("Winner")
 }
 
 // Friendships Model
@@ -47,10 +47,10 @@ model FriendRelation {
   id               Int              @id @default(autoincrement())
   
   user_id          Int
-  sender           Users            @relation("SentRequests", fields: [user_id], references: [uid])
+  sender           User            @relation("SentRequests", fields: [user_id], references: [id])
   
   friend_id        Int
-  friend           Users            @relation("ReceivedRequests", fields: [friend_id], references: [uid])
+  friend           User            @relation("ReceivedRequests", fields: [friend_id], references: [id])
 
   is_accepted      Boolean          @default(false)
   created_at       DateTime         @default(now())
@@ -61,31 +61,31 @@ model FriendRelation {
 }
 
 // Tic Tac Toe Game Model
-model game_ttt {
+model Game_ttt {
   id               Int              @id @default(autoincrement())
   player1_id       Int
-  player1          Users            @relation("Player1", fields: [player1_id], references: [uid])
+  player1          User            @relation("Player1", fields: [player1_id], references: [id])
   player2_id       Int
-  player2          Users            @relation("Player2", fields: [player2_id], references: [uid])
+  player2          User            @relation("Player2", fields: [player2_id], references: [id])
   winner_id        Int?
-  winner           Users?           @relation("Winner", fields: [winner_id], references: [uid])
+  winner           User?           @relation("Winner", fields: [winner_id], references: [id])
   created_at       DateTime         @default(now())
 }
 
 // Rock Paper Scissors Game Model
-model game_rps {
+model Game_rps {
   id               Int              @id @default(autoincrement())
   player1_id       Int
-  player1          Users            @relation("Player1", fields: [player1_id], references: [uid])
+  player1          User            @relation("Player1", fields: [player1_id], references: [id])
   player2_id       Int
-  player2          Users            @relation("Player2", fields: [player2_id], references: [uid])
+  player2          User            @relation("Player2", fields: [player2_id], references: [id])
   winner_id        Int?
-  winner           Users?           @relation("Winner", fields: [winner_id], references: [uid])
+  winner           User?           @relation("Winner", fields: [winner_id], references: [id])
   created_at       DateTime         @default(now())
 }
 
 // Google Authentication Model
-model google_auth {
+model Google_auth {
   google_id       String           @id
   email           String           @unique
   refresh_token   String
@@ -93,5 +93,5 @@ model google_auth {
   granted_scopes  String
   expiry_date     DateTime
   user_id         Int             @unique
-  user            Users           @relation("GoogleAuth", fields: [user_id], references: [uid])
+  user            User           @relation("GoogleAuth", fields: [user_id], references: [id])
 }

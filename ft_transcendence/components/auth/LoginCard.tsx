@@ -2,6 +2,8 @@ import { LogIn } from "lucide-react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 
+import Link from "next/link";
+
 export function LoginCard() {
   return (
     <section className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl">
@@ -28,6 +30,14 @@ export function LoginCard() {
         <LoginForm />
 
         <OAuthButtons />
+
+        <div className="text-center text-sm text-white/50">
+          Don't have an account?{" "}
+          <Link href="/register" className="text-white hover:underline">
+            Register
+          </Link>
+        </div>
+
       </div>
     </section>
   );
