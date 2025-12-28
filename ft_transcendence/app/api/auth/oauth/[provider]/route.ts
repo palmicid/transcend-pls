@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { setUserId } from "@/lib/auth";
+import crypto from 'crypto';
 
 // Mocked email addresses for each OAuth provider
 const PROVIDER_TO_EMAIL: Record<string, string> = {
@@ -16,6 +17,7 @@ export async function GET(
   const { provider } = await params;
   let rootUrl: string;
   let options: Record<string, string>;
+  const state = crypto.randomBytes(32).toString('hex');
   if (provider === 'google') {
     rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
     options = {
@@ -25,6 +27,7 @@ export async function GET(
       response_type: "code",
       prompt: "consent",
       scope: "openid email profile",
+      state,
     };
     
   }
@@ -34,6 +37,7 @@ export async function GET(
       client_id: process.env.FTBK_CLIENT_ID!,
       redirect_uri: process.env.FTBK_REDIRECT_URI!,
       response_type: "code",
+      state,
     };
   }
   else {
@@ -42,10 +46,19 @@ export async function GET(
       redirect_uri: process.env.GITHUB_REDIRECT_URI!,
       client_id: process.env.GITHUB_CLIENT_ID!,
       scope: "user:email",
+      state,
     };
   }
+  
   const qs = new URLSearchParams(options);
-  return NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
+  const response = NextResponse.redirect(`${rootUrl}?${qs.toString()}`);
+  response.cookies.set('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax', 
+    maxAge: 60 * 10,
+  });
+  return response;
 
   // const email = PROVIDER_TO_EMAIL[provider];
 

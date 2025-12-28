@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { setUserId } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
+import { cookies } from "next/headers";
 
 interface TokenResponse {
   id_token: string;
@@ -24,6 +25,17 @@ export async function GET(
 ) {
   const { provider } = await params;
   const { searchParams } = new URL(req.url);
+  
+  // CSRF Check
+  const queryState = searchParams.get("state");
+  const cookieStore = await cookies();
+  const savedState = cookieStore.get("oauth_state")?.value;
+  if (!queryState || !savedState || queryState !== savedState) {
+    console.error("[SECURITY_ERROR]: State mismatch or missing");
+    return redirectWithError("Invalid state. Possible CSRF attack.", req);
+  }
+  cookieStore.delete("oauth_state");
+  
   const code = searchParams.get("code");
   if (!code) {
     return redirectWithError("Code missing", req);
