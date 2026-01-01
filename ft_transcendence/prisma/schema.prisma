@@ -18,7 +18,7 @@ model User {
   id               Int              @id @default(autoincrement())
   username         String           @unique
   email            String           @unique
-  hashedPassword   String
+  hashed_password   String
   avatar_url       String           @default("") //default pic here
   online_status    Boolean          @default(false)
   created_at       DateTime         @default(now())
