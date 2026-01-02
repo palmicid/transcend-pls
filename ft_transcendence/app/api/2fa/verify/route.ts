@@ -2,14 +2,14 @@ import prisma from "@/lib/prisma";
 import { authenticator } from "otplib";
 import { getSession, setUserId } from "@/lib/auth/auth-session";
 import { NextResponse } from "next/server";
-import { redirect } from "next/dist/server/api-utils";
+import { decrypt } from "@/lib/auth/crypto";
 
 async function getUserSecret(userId: number): Promise<string>{
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { secret: true },
   });
-  return user.secret;
+  return (user.secret);
 }
 
 async function updateUserIsVerified(userId: number): Promise<void>{
@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     if (!session?.userId)
       throw new Error("Session not found");
     const userId = session.userId;
-    const secret = await getUserSecret(userId);
+    const encrypt_secret = await getUserSecret(userId);
+    const secret = decrypt(encrypt_secret);
     if (!secret) throw new Error("Secret not found");
     const isValid = authenticator.verify({ token, secret });
     if (!isValid) {
