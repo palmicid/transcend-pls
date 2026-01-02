@@ -44,8 +44,9 @@ export async function GET(
     const userInfo = await strategy.fetchUserInfo(tokenData);
     const user = await syncUserWithDatabase(userInfo, tokenData);
 
-    await setUserId(String(user.id));
-    return NextResponse.redirect(new URL("/main", req.url));
+    await setUserId(user.id);
+    return NextResponse.redirect(new URL("/2fa", req.url));
+    // return NextResponse.redirect(new URL("/main", req.url));
 
   } catch (error) {
     console.error(`[AUTH_ERROR_${provider.toUpperCase()}]:`, error);

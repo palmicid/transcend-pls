@@ -1,4 +1,4 @@
-import { getUserId } from "@/lib/auth";
+import { getSession } from "@/lib/auth/auth-session";
 import { getRoomMeta } from "../actions";
 import RoomView, { GameType } from "./RoomView";
 
@@ -10,8 +10,8 @@ type PageProps = {
 export default async function RoomPage({ params, searchParams }: PageProps) {
   const { roomId } = await params;
   const resolvedSearch = searchParams ? await searchParams : undefined;
-  const userId = await getUserId();
-  if (!userId) {
+  const session = await getSession();
+  if (!session) {
     throw new Error("Unauthorized");
   }
 
@@ -26,7 +26,7 @@ export default async function RoomPage({ params, searchParams }: PageProps) {
   return (
     <RoomView
       roomId={roomId}
-      userId={userId}
+      userId={session.userId as string}
       gameType={resolvedGame}
       initialState={meta.state}
     />

@@ -14,8 +14,8 @@ datasource db {
 }
 
 
-model Users {
-  uid              Int              @id @default(autoincrement())
+model User {
+  id              Int              @id @default(autoincrement())
   username         String           @unique
   email            String           @unique
   password         String
@@ -23,9 +23,11 @@ model Users {
   online_status    Boolean          @default(false)
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
+  secret           String           @default("")
+  is_verified      Boolean          @default(false)
 
   // Google Auth Relation
-  googleAuth      google_auth?     @relation("GoogleAuth")
+  googleAuth      oauth[]
 
   // Relations
   sentRequests     FriendRelation[]  @relation("SentRequests")
@@ -47,10 +49,10 @@ model FriendRelation {
   id               Int              @id @default(autoincrement())
   
   user_id          Int
-  sender           Users            @relation("SentRequests", fields: [user_id], references: [uid])
+  sender           User            @relation("SentRequests", fields: [user_id], references: [id])
   
   friend_id        Int
-  friend           Users            @relation("ReceivedRequests", fields: [friend_id], references: [uid])
+  friend           User            @relation("ReceivedRequests", fields: [friend_id], references: [id])
 
   is_accepted      Boolean          @default(false)
   created_at       DateTime         @default(now())
@@ -64,11 +66,11 @@ model FriendRelation {
 model game_ttt {
   id               Int              @id @default(autoincrement())
   player1_id       Int
-  player1          Users            @relation("Player1", fields: [player1_id], references: [uid])
+  player1          User            @relation("Player1", fields: [player1_id], references: [id])
   player2_id       Int
-  player2          Users            @relation("Player2", fields: [player2_id], references: [uid])
+  player2          User            @relation("Player2", fields: [player2_id], references: [id])
   winner_id        Int?
-  winner           Users?           @relation("Winner", fields: [winner_id], references: [uid])
+  winner           User?           @relation("Winner", fields: [winner_id], references: [id])
   created_at       DateTime         @default(now())
 }
 
@@ -76,22 +78,21 @@ model game_ttt {
 model game_rps {
   id               Int              @id @default(autoincrement())
   player1_id       Int
-  player1          Users            @relation("Player1", fields: [player1_id], references: [uid])
+  player1          User            @relation("Player1", fields: [player1_id], references: [id])
   player2_id       Int
-  player2          Users            @relation("Player2", fields: [player2_id], references: [uid])
+  player2          User            @relation("Player2", fields: [player2_id], references: [id])
   winner_id        Int?
-  winner           Users?           @relation("Winner", fields: [winner_id], references: [uid])
+  winner           User?           @relation("Winner", fields: [winner_id], references: [id])
   created_at       DateTime         @default(now())
 }
 
 // Google Authentication Model
-model google_auth {
-  google_id       String           @id
-  email           String           @unique
+model oauth {
+  oauth_id       String           @id
   refresh_token   String
   access_token    String
   granted_scopes  String
   expiry_date     DateTime
-  user_id         Int             @unique
-  user            Users           @relation("GoogleAuth", fields: [user_id], references: [uid])
+  user_id         Int            
+  user            User           @relation(fields: [user_id], references: [id])
 }
