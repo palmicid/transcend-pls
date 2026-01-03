@@ -17,8 +17,6 @@ export function encrypt(text: string): string {
 export function decrypt(hash: string): string {
   const [iv, tag, content] = hash.split(':');
   
-  console.log('ENCRYPTION_KEY---', ENCRYPTION_KEY);
-
   const decipher = createDecipheriv(
     ALGORITHM, 
     Buffer.from(ENCRYPTION_KEY!), 

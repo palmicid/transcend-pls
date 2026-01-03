@@ -1,90 +1,100 @@
 'use client';
 
-import {Button, Form, InputOTP, Label, Spinner} from "@heroui/react";
+import { Form, InputOTP, Label } from "@heroui/react";
 import { REGEXP_ONLY_DIGITS } from '@heroui/react';
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import React from "react";
 
 export function OtpCard() {
+  const router = useRouter();
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const [value, setValue] = React.useState("");
-  const [message, setMessage] = React.useState("Enter 6-digit from two factor anuthenticator APP");
-  const [status, setStatus] =React.useState(true);
-  const [isComplete, setIsComplete] = React.useState(false);
+  const [message, setMessage] = React.useState("Enter 6-digit from two factor authenticator APP");
+  const [isError, setIsError] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const handleComplete = (code: string) => {
-    setIsComplete(true);
-    console.log("Code complete:", code);
-  };
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+
+  const executeVerify = React.useCallback(async (code: string) => {
+    if (isSubmitting || code.length < 6) return;
     setIsSubmitting(true);
-    const res = await fetch("/api/2fa/verify", {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        token: value
-      })
-    });
-    const respone = await res.json();
-    if (respone.ok)
-      redirect("/main");
-    else{
-      setMessage("Invalid verify code, please try again")
-      setStatus(false)
-    }
-    
-    // Simulate API call
-    setTimeout(() => {
+    setIsError(false);
+    try {
+      const res = await fetch("/api/2fa/verify", {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: code })
+      });
+      const response = await res.json();
+      if (response.ok) {
+        setMessage("Success! Redirecting...");
+        router.push("/main");
+        router.refresh();
+      } else {
+        setMessage("Invalid verify code, please try again");
+        setIsError(true);
+        setValue("");
+        setTimeout(() => inputRef.current?.focus(), 10);
+      }
+    } catch (err) {
+      setMessage(`Connection error, please try again later`);
+      setIsError(true);
+    } finally {
       setIsSubmitting(false);
-      setValue("");
-      setIsComplete(false);
-    }, 2000);
+    }
+  }, [isSubmitting, router]);
+
+  const onFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    executeVerify(value);
   };
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <Form className="flex w-[280px] flex-col gap-2" onSubmit={handleSubmit}>
+    <Form className="flex w-[280px] flex-col gap-4" onSubmit={onFormSubmit}>
       <div className="flex flex-col gap-1">
-        <Label>Verify account</Label>
-          <p className={ status ? "text-sm text-muted text-[13px]" : "text-sm text-red-400 text-[13px]"}>{message}</p>
+        <Label className="text-lg font-semibold">Verify account</Label>
+        <p className={`text-[13px] transition-colors ${isError ? "text-red-400" : "text-muted"}`}>
+          {message}
+        </p>
       </div>
-      <InputOTP
-        maxLength={6}
-        pattern={REGEXP_ONLY_DIGITS}
-        value={value}
-        onComplete={handleComplete}
-        onChange={(val) => {
-          setValue(val);
-          setIsComplete(false);
-        }}
-      >
-          <InputOTP.Slot index={0} />
-          <InputOTP.Slot index={1} />
-          <InputOTP.Slot index={2} />
-          <InputOTP.Slot index={3} />
-          <InputOTP.Slot index={4} />
-          <InputOTP.Slot index={5} />
-      </InputOTP>
-      <Button
-        className="mt-2 w-full"
-        isDisabled={!isComplete}
-        isPending={isSubmitting}
-        type="submit"
-        variant="primary"
-        // onClick={handleOnClick}
-      >
-        {isSubmitting ? (
-          <>
-            <Spinner color="current" size="sm" />
-            Verifying...
-          </>
-        ) : (
-          "Verify Code"
-        )}
-      </Button>
+
+      <div className="flex justify-center">
+        <InputOTP
+          ref={inputRef}
+          maxLength={6}
+          pattern={REGEXP_ONLY_DIGITS}
+          value={value}
+          onChange={(val) => {
+            if (value.length < 6 || val.length < 6)
+              setValue(val);
+            if (isError)
+              setIsError(false);
+              setMessage("Enter 6-digit from two factor authenticator APP")
+          }}
+          onComplete={(code) => {
+            setTimeout(() => 
+              executeVerify(code)
+          , 500);
+          }}
+        >
+          <InputOTP.Group>
+            {[...Array(6)].map((_, i) => (
+              <InputOTP.Slot key={i} index={i} />
+            ))}
+          </InputOTP.Group>
+        </InputOTP>
+      </div>
+    {isSubmitting && (
+      <p className="text-center text-xs text-default-400 animate-pulse">
+        Verifying code...
+      </p>
+    )}
     </Form>
   );
 }
-

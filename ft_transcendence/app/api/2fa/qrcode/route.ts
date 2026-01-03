@@ -7,7 +7,7 @@ import { encrypt } from '@/lib/auth/crypto';
 
 
 interface _UserInfo {
-    username: string,
+    email: string,
     is_verified: boolean,
 }
 
@@ -28,7 +28,7 @@ export async function GET(): Promise<Response> {
             })
         const service = 'TranscenDEAD';
         const secret = authenticator.generateSecret();
-        const otpauth = authenticator.keyuri(user.username, service, secret);
+        const otpauth = authenticator.keyuri(user.email, service, secret);
         
         const qrCodeUrl = await qrcode.toDataURL(otpauth);
         const encrypt_secret = encrypt(secret);
@@ -49,7 +49,7 @@ export async function GET(): Promise<Response> {
 async function _getUserInfo(userId: number) : Promise< _UserInfo | null >{
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { username: true, is_verified: true }
+        select: { email: true, is_verified: true }
     });
     return user;
 }
