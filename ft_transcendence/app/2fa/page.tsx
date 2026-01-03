@@ -4,11 +4,25 @@ import { QrCard } from "@/components/2fa/QrCard";
 
 export default function LoginPage() {
   return (
-     <MainLayout showNav={false}>
-       <div className="min-h-[calc(100vh-80px)] flex items-center justify-center px-4">
-         <QrCard />
-         <OtpCard />
-       </div>
+    <MainLayout showNav={true}>
+      <div className="flex w-full items-center justify-center">
+        <section className="
+          relative
+          w-fit
+          flex flex-col
+          item-center
+          justify-center
+          overflow-hidden
+          rounded-3xl
+          border
+          border-white/10
+          bg-white/[0.04]
+          backdrop-blur-xl 
+          p-5">
+          <QrCard />
+          <OtpCard />
+        </section>
+      </div>
     </MainLayout>
   );
 }     

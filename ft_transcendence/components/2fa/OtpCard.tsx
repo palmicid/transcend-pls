@@ -7,6 +7,8 @@ import React from "react";
 
 export function OtpCard() {
   const [value, setValue] = React.useState("");
+  const [message, setMessage] = React.useState("Enter 6-digit from two factor anuthenticator APP");
+  const [status, setStatus] =React.useState(true);
   const [isComplete, setIsComplete] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const handleComplete = (code: string) => {
@@ -27,9 +29,14 @@ export function OtpCard() {
         token: value
       })
     });
-    const { ok, message } = await res.json();
-    if (ok)
+    const respone = await res.json();
+    if (respone.ok)
       redirect("/main");
+    else{
+      setMessage("Invalid verify code, please try again")
+      setStatus(false)
+    }
+    
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
@@ -37,10 +44,12 @@ export function OtpCard() {
       setIsComplete(false);
     }, 2000);
   };
-  
   return (
     <Form className="flex w-[280px] flex-col gap-2" onSubmit={handleSubmit}>
-      <Label>Verify account</Label>
+      <div className="flex flex-col gap-1">
+        <Label>Verify account</Label>
+          <p className={ status ? "text-sm text-muted text-[13px]" : "text-sm text-red-400 text-[13px]"}>{message}</p>
+      </div>
       <InputOTP
         maxLength={6}
         pattern={REGEXP_ONLY_DIGITS}

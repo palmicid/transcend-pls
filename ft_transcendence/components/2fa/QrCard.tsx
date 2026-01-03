@@ -1,45 +1,62 @@
 'use client';
 
-// import QRCode from "qrcode";
-// import { authenticator } from 'otplib';
-import Image from 'next/image'
-import { Card, Button } from "@heroui/react";
-import { useState } from 'react';
-
+import Image from 'next/image';
+import { Card, Skeleton } from "@heroui/react";
+import { useEffect, useState } from 'react';
 
 export function QrCard() {
-  const [src, setSrc] = useState("https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/neo1.jpeg");
-  async function QrImage() {
-    const res = await fetch("/api/2fa/qrcode", {
-      method : 'GET',
-      credentials: 'include'
-    })
-    const { data } = await res.json().catch(() => null);
-    setSrc(data)
-    console.log(src)
+  const [src, setSrc] = useState<string>("");
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const qrGenerate = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch("/api/2fa/qrcode", {
+          method: 'GET',
+          credentials: 'include'
+        });
+        const result = await res.json();
+        if (result.data)
+          setSrc(result.data);
+        setIsVerified(result.isVerified);
+      } catch (err) {
+        console.error("Failed to fetch QR:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    qrGenerate();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Card className="relative h-[280px] w-[280px] mb-4">
+        <Skeleton className="w-full h-full" />
+      </Card>
+    );
   }
 
-  // console.log(await res.json());
-    return (
-        <div>
-            <Card className="relative col-span-12 h-[250px] sm:h-[300px] md:col-span-8 md:h-[350px]">
-            <img
-                alt="NEO Home Robot"
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full object-cover"
-                // src="https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/neo1.jpeg"
-                src={src}
-            />
-            <Card.Footer className="z-10 mt-auto flex items-end justify-between">
-              <div>
-                <div className="text-base font-medium text-black sm:text-lg">NEO</div>
-                <div className="text-xs font-medium text-black/50 sm:text-sm">$499/m</div>
-              </div>
-              <Button className="bg-white text-black" size="sm" variant="tertiary" onClick={QrImage}>
-                Get now
-              </Button>
-            </Card.Footer>
-          </Card>
-        </div>
-    );
+  if (isVerified === true) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <Card className="relative h-[280px] w-[280px] mb-4 overflow-hidden bg-white flex items-center justify-center">
+        {src ? (
+          <Image
+            alt="2FA QRcode"
+            fill
+            src={src}
+            className="p-4 object-contain"
+            unoptimized
+          />
+        ) : (
+          <div className="text-sm text-gray-500">Fail generating the QR Code</div>
+        )}
+      </Card>
+    </div>
+  );
 }

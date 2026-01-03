@@ -21,7 +21,11 @@ export async function GET(): Promise<Response> {
         const user = await _getUserInfo(userId);
         if (!user)
             return NextResponse.json({ error: "User not found" }, { status: 404 });
-
+        if (user.is_verified == true)
+            return NextResponse.json({
+                data: null,
+                isVerified: true,
+            })
         const service = 'TranscenDEAD';
         const secret = authenticator.generateSecret();
         const otpauth = authenticator.keyuri(user.username, service, secret);
