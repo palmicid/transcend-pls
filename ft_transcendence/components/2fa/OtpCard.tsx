@@ -36,7 +36,7 @@ export function OtpCard() {
         setTimeout(() => inputRef.current?.focus(), 10);
       }
     } catch (err) {
-      setMessage(`Connection error, please try again later`);
+      setMessage(`ERROR: ${err}, please try again later`);
       setIsError(true);
     } finally {
       setIsSubmitting(false);
