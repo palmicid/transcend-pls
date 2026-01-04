@@ -1,7 +1,8 @@
 // import "dotenv/config"; // 👈 ADD THIS
 import { PrismaClient } from "@prisma/client";
 import {PrismaPg } from "@prisma/adapter-pg";
-import { Prisma } from "@prisma/client/extension";
+// import { Prisma } from "@prisma/client/extension";
+// import { bcrypt } from "bcryptjs";
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
@@ -20,39 +21,90 @@ async function main() {
     prisma.User.deleteMany(),
   ]);
 
+  // password for all users
+  const mobilePassword = "mobile123";
+  const ohmPassword = "ohm123";
+  const palmPassword = "palm123";
+  const grammyPassword = "grammy123";
+  const soundPassword = "sound123";
+  // const mobilePassword = bcrypt.hashSync("mobile123", 12);
+
+
+
   console.log('Start seeding... 🌱')
-  await prisma.user.createMany({
-    data: [
-      { email: "mobile@example.com",
-        username: "mobile",
-        displayName: "Mobile",
-        password: "mobile123",
-        online_status: true, },
-      { email: "ohm@example.com",
-        username: "ohm",
-        displayName: "Ohm",
-        password: "ohm123",
-        online_status: true, },
-      { email: "palm@example.com",
-        username: "palm",
-        displayName: "Palm",
-        password: "palm123",
-        online_status: false, },
-      { email: "grammy@example.com",
-        username: "grammy",
-        displayName: "Grammy",
-        password: "grammy123",
-        online_status: false,},
-      { email: "sound@example.com",
-        username: "sound",
-        displayName: "Sound",
-        password: "sound123",
-        online_status: false,}
-    ],
-    skipDuplicates: true,
+  await prisma.user.create({
+    data: {
+      email: "mobile@example.com",
+      username: "mobile",
+      display_name: "Mobile",
+      password: mobilePassword,
+      online_status: true,
+    },
+  });
+  
+  await prisma.user.create({
+    data: {
+      email: "ohm@example.com",
+      username: "ohm",
+      display_name: "Ohm",
+      password: ohmPassword,
+      online_status: true,
+    },
+  }),
+
+  await prisma.user.create({
+    data: {
+      email: "palm@example.com",
+      username: "palm",
+      display_name: "Palm",
+      password: palmPassword,
+      online_status: false
+    },
+
+  }),
+
+  await prisma.user.create({
+    data: {
+      email: "grammy@example.com",
+      username: "grammy",
+      display_name: "Grammy",
+      password: grammyPassword,
+      online_status: false,
+    },
+  }),
+
+  await prisma.user.create({
+    data: {
+      email: "sound@example.com",
+      username: "sound",
+      display_name: "Sound",
+      password: soundPassword,
+      online_status: false,
+    },
   });
 
-  
+  // FriendRelation mock
+  // await prisma.FriendRelation.createMany({
+  //   data: [{
+  //     user_id: mobile.id,
+  //     friend_id: ohm.id,
+  //   },
+  //   {
+  //     user_id: ohm.id,
+  //     friend_id: palm.id,
+  //   }],
+  //   })
+
+  // seed format
+  // await prisma.User.create({
+  //   data: {
+  //     email: "user@example.com",
+  //     username: "user",
+  //     hashed_password: "hashed_password",
+  //     online_status: false,
+  //   },
+  // });
+
   console.log('Seeding finished! ✅')
 }
 
