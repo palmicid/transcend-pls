@@ -3,7 +3,7 @@ import { authenticator } from 'otplib';
 import { getSession } from '@/lib/auth/auth-session';
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { encrypt } from '@/lib/auth/crypto';
+import { encrypt } from '@/lib/auth/auth-encryption';
 
 
 interface _UserInfo {

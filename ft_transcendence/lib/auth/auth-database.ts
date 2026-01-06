@@ -4,6 +4,7 @@ import {
     UserInfo,
     TokenResponse
 } from "@/lib/auth/auth-strategies";
+import { encrypt } from "./auth-encryption";
 
 // Upsert user and token in database
 export async function syncUserWithDatabase(
@@ -28,8 +29,8 @@ export async function syncUserWithDatabase(
     await tx.oauth.upsert({
       where: { oauth_id: userInfo.sub },
       update: {
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token || "",
+        access_token: encrypt(tokenData.access_token),
+        refresh_token: tokenData.refresh_token ? encrypt(tokenData.refresh_token) : "",
         granted_scopes: tokenData.scope,
         expiry_date: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : new Date(Date.now() + 3599*1000),
       },

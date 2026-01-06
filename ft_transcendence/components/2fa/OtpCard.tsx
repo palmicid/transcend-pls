@@ -73,9 +73,10 @@ export function OtpCard() {
           onChange={(val) => {
             if (value.length < 6 || val.length < 6)
               setValue(val);
-            if (isError)
+            if (isError) {
               setIsError(false);
               setMessage("Enter 6-digit from two factor authenticator APP")
+            }
           }}
           onComplete={(code) => {
             setTimeout(() => 

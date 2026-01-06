@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { authenticator } from "otplib";
 import { getSession, setUserId } from "@/lib/auth/auth-session";
 import { NextResponse } from "next/server";
-import { decrypt } from "@/lib/auth/crypto";
+import { decrypt } from "@/lib/auth/auth-encryption";
 
 async function getUserSecret(userId: number): Promise<string>{
   const user = await prisma.user.findUnique({
