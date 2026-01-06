@@ -1,7 +1,8 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { env } from '../env';
 
 const ALGORITHM = 'aes-256-gcm';
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const ENCRYPTION_KEY = env.ENCRYPTION_KEY;
 const IV_LENGTH = 16;
 
 export function encrypt(text: string): string {

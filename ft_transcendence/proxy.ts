@@ -8,17 +8,16 @@ export const config = {
   ],
 }
 
-export async function middleware(request: NextRequest) {
-    console.log("Middleware running for:", request.nextUrl.pathname);   
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
     const session = await getSession();
     if (!session) {
-        if (pathname == '/login' || pathname == '/')
+        if (pathname === '/login' || pathname === '/')
             return NextResponse.next();
         return NextResponse.redirect(new URL('/login', request.url));
     }
     else if (!session.verify2FA){
-        if (pathname == '/2fa')
+        if (pathname === '/2fa')
             return NextResponse.next();
         return NextResponse.redirect(new URL('/2fa', request.url));
     }

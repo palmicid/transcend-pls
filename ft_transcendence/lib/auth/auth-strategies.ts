@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { env } from "../env";
 
 export interface TokenResponse {
   id_token: string;
@@ -30,9 +31,9 @@ export const GoogleStrategy: OAuthProviderStrategy = {
       method: "POST",
       body: new URLSearchParams({
         code,
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
+        client_id: env.GOOGLE_CLIENT_ID!,
+        client_secret: env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: env.GOOGLE_REDIRECT_URI!,
         grant_type: "authorization_code",
       }),
     });
@@ -69,9 +70,9 @@ export const GitHubStrategy: OAuthProviderStrategy = {
       },
       body: new URLSearchParams({
         code,
-        client_id: process.env.GITHUB_CLIENT_ID!,
-        client_secret: process.env.GITHUB_CLIENT_SECRET!,
-        redirect_uri: process.env.GITHUB_REDIRECT_URI!,
+        client_id: env.GITHUB_CLIENT_ID!,
+        client_secret: env.GITHUB_CLIENT_SECRET!,
+        redirect_uri: env.GITHUB_REDIRECT_URI!,
       }),
     });
     if (!res.ok) {
@@ -104,9 +105,9 @@ export const School42Strategy: OAuthProviderStrategy = {
       },
       body: new URLSearchParams({
         code,
-        client_id: process.env.FTBK_CLIENT_ID!,
-        client_secret: process.env.FTBK_CLIENT_SECRET!,
-        redirect_uri: process.env.FTBK_REDIRECT_URI!,
+        client_id: env.FTBK_CLIENT_ID!,
+        client_secret: env.FTBK_CLIENT_SECRET!,
+        redirect_uri: env.FTBK_REDIRECT_URI!,
         grant_type: "authorization_code",
       }),
     });

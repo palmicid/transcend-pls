@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "../env";
 
 interface UserSession {
     userId: number;
@@ -7,7 +8,7 @@ interface UserSession {
 }
 
 export const AUTH_COOKIE_NAME = "auth_token"; 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET!);
 export const SESSION_TTL = 24 * 60 * 60; // 24 hours (seconds)
 
 export async function setUserId(user_id: number, final_2fa: boolean=false): Promise<void> {
@@ -20,7 +21,7 @@ export async function setUserId(user_id: number, final_2fa: boolean=false): Prom
   const cookieStore = await cookies();
   cookieStore.set(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: SESSION_TTL,
     path: "/",
