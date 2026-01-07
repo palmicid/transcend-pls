@@ -9,7 +9,10 @@ async function getUserSecret(userId: number): Promise<string>{
     where: { id: userId },
     select: { secret: true },
   });
-  return (user.secret);
+  if (!user || !user.secret) {
+    throw new Error("User secret not found");
+  }
+  return user.secret;
 }
 
 async function updateUserIsVerified(userId: number): Promise<void>{

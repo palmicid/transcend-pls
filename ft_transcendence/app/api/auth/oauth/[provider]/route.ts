@@ -22,15 +22,15 @@ export async function GET(
     const { provider } = await params;
     const config = AUTH_CONFIGS[provider as keyof typeof AUTH_CONFIGS];
 
-    // ตรวจสอบว่า Provider ที่เรียกมามีรองรับหรือไม่
+    // Check if the requested Provider is supported
     if (!config) {
       return NextResponse.redirect(new URL("/login?error=unsupported_provider", req.url));
     }
 
-    // สร้าง Secure State
+    // Generate Secure State
     const state = crypto.randomBytes(32).toString('hex');
     
-    // สร้าง Query Parameters
+    // Generate Query Parameters
     const queryParams = new URLSearchParams({
       client_id: config.clientId,
       redirect_uri: config.redirectUri,
@@ -41,7 +41,7 @@ export async function GET(
     const targetUrl = `${config.authUrl}?${queryParams.toString()}`;
     const response = NextResponse.redirect(targetUrl);
 
-    // ฝัง State ลงใน Cookie อย่างปลอดภัย
+    // Embed State into Cookie securely
     response.cookies.set('oauth_state', state, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',

@@ -36,8 +36,8 @@ export async function syncUserWithDatabase(
       },
       create: {
         oauth_id: userInfo.sub,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token || "",
+        access_token: encrypt(tokenData.access_token),
+        refresh_token: tokenData.refresh_token ? encrypt(tokenData.refresh_token) : "",
         granted_scopes: tokenData.scope,
         expiry_date: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : new Date(Date.now() + 3599*1000),
         user_id: user.id,

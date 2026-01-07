@@ -7,7 +7,7 @@ const IV_LENGTH = 16;
 
 export function encrypt(text: string): string {
   const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY!), iv);
+  const cipher = createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
   
   const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -20,7 +20,7 @@ export function decrypt(hash: string): string {
   
   const decipher = createDecipheriv(
     ALGORITHM, 
-    Buffer.from(ENCRYPTION_KEY!), 
+    Buffer.from(ENCRYPTION_KEY), 
     Buffer.from(iv, 'hex')
   );
   decipher.setAuthTag(Buffer.from(tag, 'hex'));

@@ -8,7 +8,7 @@ interface UserSession {
 }
 
 export const AUTH_COOKIE_NAME = "auth_token"; 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET!);
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 export const SESSION_TTL = 24 * 60 * 60; // 24 hours (seconds)
 
 export async function setUserId(user_id: number, final_2fa: boolean=false): Promise<void> {
