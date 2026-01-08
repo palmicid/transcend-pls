@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth/auth-session";
 
 import { MainLayout } from "@/components/layout/MainLayout";
 import { HeroHeader } from "@/components/main/HeroHeader";
@@ -8,20 +8,20 @@ import { FeatureGrid } from "@/components/main/FeatureGrid";
 import { RoomsList } from "@/components/main/RoomsList";
 
 export default async function MainPage() {
-  let userId: string;
+  let userId: number;
   try {
     userId = await requireAuth();
   } catch {
     redirect("/login");
   }
 
-  const me = await prisma.user.findUnique({ where: { id: Number(userId) } });
+  const me = await prisma.user.findUnique({ where: { id: userId } });
   if (!me) redirect("/login");
 
-  const rooms = await prisma.room.findMany({
-    orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, type: true, maxUsers: true },
-  });
+  // const rooms = await prisma.room.findMany({
+  //   orderBy: { createdAt: "desc" },
+  //   select: { id: true, name: true, type: true, maxUsers: true },
+  // });
 
   const userLabel = me.displayName ?? me.username ?? me.email ?? "User";
 
@@ -33,7 +33,7 @@ export default async function MainPage() {
       <FeatureGrid />
 
       {/* Rooms from seed/db */}
-      <RoomsList rooms={rooms} />
+      {/* <RoomsList rooms={rooms} /> */}
     </MainLayout>
   );
 }

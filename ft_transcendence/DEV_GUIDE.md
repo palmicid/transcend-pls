@@ -73,7 +73,7 @@ import { Game, GameConfig, GameState, PlayerSlot } from "@/lib/game";
 import { createSSEHandler } from "@/lib/sse";
 
 // Authentication
-import { getUserId, requireAuth } from "@/lib/auth";
+import { getSession, requireAuth } from "@/lib/auth";
 ```
 
 ## Prerequisites
