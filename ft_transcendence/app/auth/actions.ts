@@ -1,6 +1,6 @@
 "use server";
 
-import { setUserId, clearUserId } from "@/lib/auth";
+import { setUserId, clearUserId } from "@/lib/auth/auth-session";
 import { redirect } from "next/navigation";
 
 /**

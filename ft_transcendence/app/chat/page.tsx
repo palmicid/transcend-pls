@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth/auth-session";
 import { MainLayout } from "@/components/layout/MainLayout";
 import LLMChatApp from "@/components/chat/LLMChatApp";
 

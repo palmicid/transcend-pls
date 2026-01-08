@@ -23,9 +23,11 @@ model User {
   online_status    Boolean          @default(false)
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
+  secret           String           @default("")
+  is_verified      Boolean          @default(false)
 
   // Google Auth Relation
-  googleAuth      Google_auth?     @relation("GoogleAuth")
+  googleAuth      oauth[]
 
   // Relations
   sentRequests     FriendRelation[]  @relation("SentRequests")
@@ -85,13 +87,12 @@ model Game_rps {
 }
 
 // Google Authentication Model
-model Google_auth {
-  google_id       String           @id
-  email           String           @unique
+model oauth {
+  oauth_id       String           @id
   refresh_token   String
   access_token    String
   granted_scopes  String
   expiry_date     DateTime
-  user_id         Int             @unique
-  user            User           @relation("GoogleAuth", fields: [user_id], references: [id])
+  user_id         Int            
+  user            User           @relation(fields: [user_id], references: [id])
 }
