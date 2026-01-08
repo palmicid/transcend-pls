@@ -7,6 +7,7 @@ services:
     build: .
     ports:
       - "3000:3000"
+      - "51212:51212" # for Prisma studio
     env_file:
       - .env
     depends_on:
