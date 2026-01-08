@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-// import { bcrypt } from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { setUserId } from "@/lib/auth";
 
 export async function POST(req: Request) {
@@ -8,46 +8,49 @@ export async function POST(req: Request) {
         const body = await req.json().catch(() => null);
         const email = body?.email?.trim();
         const password = body?.password;
-        let username = body?.username?.trim();
 
         if (!email || !password) {
             return NextResponse.json({ ok: false, message: "Missing email or password" }, { status: 400 });
         }
 
-        // const hashedPassword = await bcrypt.hash(password, 12);
+        //hash password
+        const salt = await bcrypt.genSalt(12);
+        const hashedPassword = await bcrypt.hash(password, salt);
         
-        if (!username) {
-            username = email.split("@")[0];
+        // Check email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json({ ok: false, message: "Invalid email format" }, { status: 400 });
         }
 
-        // Check existing
-        const existingUser = await prisma.user.findFirst({
-            where: {
-                OR: [{ email }, { username }],
-            },
+        // Check existing email
+        const isExistingEmail = await prisma.user.findFirst({
+            where: { email },
         });
 
-        
-        
-        if (existingUser) {
-            return NextResponse.json({ ok: false, message: "User already exists" }, { status: 409 });
+        if (isExistingEmail) {
+            return NextResponse.json({ ok: false, message: "Email already in use" }, { status: 409 });
         }
-        
+
+        // Crate new user
         const newUser = await prisma.user.create({
             data: {
-                email,
-                username,
-                
-                password: password,
-                // avatar_url and others have defaults
+                email: email,
+                password: hashedPassword,
             },
         });
 
         await setUserId(String(newUser.id));
 
+        newUser.display_name = `Player${newUser.id}`;
+        await prisma.user.update({
+            where: { id: newUser.id },
+            data: { display_name: newUser.display_name },
+        });
+
         return NextResponse.json({
             ok: true,
-            user: { id: newUser.id, email: newUser.email, username: newUser.username },
+            user: { id: newUser.id, email: newUser.email },
         });
     } catch (error) {
         console.error("Register error:", error);

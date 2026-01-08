@@ -1,9 +1,9 @@
-// import "dotenv/config"; // 👈 ADD THIS
+// import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import {PrismaPg } from "@prisma/adapter-pg";
 // import { Prisma } from "@prisma/client/extension";
-// import { bcrypt } from "bcryptjs";
-
+//for test haashing
+import bcrypt from "bcryptjs";
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
@@ -22,20 +22,23 @@ async function main() {
   ]);
 
   // password for all users
-  const mobilePassword = "mobile123";
-  const ohmPassword = "ohm123";
-  const palmPassword = "palm123";
-  const grammyPassword = "grammy123";
-  const soundPassword = "sound123";
-  // const mobilePassword = bcrypt.hashSync("mobile123", 12);
-
+  // const mobilePassword = "mobile123";
+  // const ohmPassword = "ohm123";
+  // const palmPassword = "palm123";
+  // const grammyPassword = "grammy123";
+  // const soundPassword = "sound123";
+  const salt = await bcrypt.genSalt(12);
+  const mobilePassword = await bcrypt.hash("mobile123", salt);
+  const ohmPassword = await bcrypt.hash("ohm123", salt);
+  const palmPassword = await bcrypt.hash("palm123", salt);
+  const grammyPassword = await bcrypt.hash("grammy123", salt);
+  const soundPassword = await bcrypt.hash("sound123", salt);
 
 
   console.log('Start seeding... 🌱')
   await prisma.user.create({
     data: {
       email: "mobile@example.com",
-      username: "mobile",
       display_name: "Mobile",
       password: mobilePassword,
       online_status: true,
@@ -45,7 +48,6 @@ async function main() {
   await prisma.user.create({
     data: {
       email: "ohm@example.com",
-      username: "ohm",
       display_name: "Ohm",
       password: ohmPassword,
       online_status: true,
@@ -55,7 +57,6 @@ async function main() {
   await prisma.user.create({
     data: {
       email: "palm@example.com",
-      username: "palm",
       display_name: "Palm",
       password: palmPassword,
       online_status: false
@@ -66,7 +67,6 @@ async function main() {
   await prisma.user.create({
     data: {
       email: "grammy@example.com",
-      username: "grammy",
       display_name: "Grammy",
       password: grammyPassword,
       online_status: false,
@@ -76,7 +76,6 @@ async function main() {
   await prisma.user.create({
     data: {
       email: "sound@example.com",
-      username: "sound",
       display_name: "Sound",
       password: soundPassword,
       online_status: false,
