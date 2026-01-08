@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client";
 import {PrismaPg } from "@prisma/adapter-pg";
 // import { Prisma } from "@prisma/client/extension";
-//for test haashing
+//for test hashing
 import bcrypt from "bcryptjs";
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
