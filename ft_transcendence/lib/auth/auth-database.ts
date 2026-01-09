@@ -20,7 +20,7 @@ export async function syncUserWithDatabase(
       update: { online_status: true, updated_at: new Date(Date.now()) },
       create: {
         email: userInfo.email,
-        username: `OA_${userInfo.sub.substring(0, 5)}`, 
+        display_name: `OA_${userInfo.sub.substring(0, 5)}`, 
         password: "OAUTH_USER_NO_PASSWORD",
         avatar_url: userInfo.picture,
         online_status: true,
