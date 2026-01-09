@@ -23,9 +23,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, message: "Invalid credentials" }, { status: 401 });
   }
 
-  await setUserId(String(user.id));
+  await setUserId(user.id);
   return NextResponse.json({
     ok: true,
-    user: { id: user.id, email: user.email, displayName: user.displayName, username: user.username },
+    user: { id: user.id, email: user.email, display_name: user.display_name },
   });
 }
