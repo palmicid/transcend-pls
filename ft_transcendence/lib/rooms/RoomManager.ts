@@ -15,7 +15,7 @@
  * ```ts
  * import { roomManager } from '@/lib/rooms';
  * import { broadcaster } from '@/lib/broadcast';
- * import TicTacToeGame from '@/app/game/tic-tac-toe/TicTacToeGame';
+ * import TicTacToeGame from '@/app/play/tic-tac-toe/lib/TicTacToeGame';
  *
  * // Create a room with a game
  * const game = new TicTacToeGame();

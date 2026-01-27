@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Room from "@/lib/rooms/Room";
 import { State } from "@/lib/rooms/RoomState";
-import TicTacToeGame from "@/app/game/tic-tac-toe/TicTacToeGame";
+import TicTacToeGame from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
 import type { Broadcaster } from "@/lib/broadcast";
 
 // Mock broadcaster

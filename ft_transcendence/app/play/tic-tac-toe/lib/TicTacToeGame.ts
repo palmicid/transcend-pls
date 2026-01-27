@@ -10,7 +10,7 @@
  *
  * @example
  * ```ts
- * import TicTacToeGame from '@/app/game/tic-tac-toe/TicTacToeGame';
+ * import TicTacToeGame from '@/app/play/tic-tac-toe/lib/TicTacToeGame';
  *
  * const game = new TicTacToeGame();
  * game.init();

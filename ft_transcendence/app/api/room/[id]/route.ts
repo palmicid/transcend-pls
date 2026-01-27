@@ -12,7 +12,7 @@ import { getSession } from "@/lib/auth/auth-session";
 import { generateSSEToken } from "@/lib/auth/sse-token";
 import { roomManager } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
-import TicTacToeGame from "@/app/game/tic-tac-toe/TicTacToeGame";
+import TicTacToeGame from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
 
 type RouteContext = {
   params: Promise<{ id: string }>;

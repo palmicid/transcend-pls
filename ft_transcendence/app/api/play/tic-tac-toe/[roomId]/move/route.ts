@@ -1,6 +1,6 @@
 /**
- * @file app/api/room/[id]/move/route.ts
- * @description Handle game moves (authenticated).
+ * @file app/api/play/tic-tac-toe/[roomId]/move/route.ts
+ * @description Handle Tic-Tac-Toe game moves (authenticated).
  *
  * Validates the move, updates Prisma, and broadcasts via Express.
  * Works even if Express is down (circuit breaker pattern).
@@ -14,11 +14,11 @@ import { expressClient } from "@/lib/resilience";
 import { roomManager } from "@/lib/rooms";
 
 type RouteContext = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ roomId: string }>;
 };
 
 /**
- * POST /api/room/:id/move - Submit a move
+ * POST /api/play/tic-tac-toe/[roomId]/move - Submit a Tic-Tac-Toe move
  *
  * Validates the move, updates the database, and broadcasts to Express.
  */
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: roomId } = await context.params;
+    const { roomId } = await context.params;
     const body = await req.json().catch(() => ({}));
     const { cell } = body as { cell?: number };
 
@@ -47,8 +47,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
+    // Verify this is a Tic-Tac-Toe room
+    if (room.game_type !== "tic-tac-toe") {
+      return NextResponse.json(
+        { error: "Not a Tic-Tac-Toe room" },
+        { status: 400 }
+      );
+    }
+
     // Verify player is in room
-    const player = room.players.find((p: { user_id: number; role: string | null }) => p.user_id === session.userId);
+    const player = room.players.find(
+      (p: { user_id: number; role: string | null }) =>
+        p.user_id === session.userId
+    );
     if (!player) {
       return NextResponse.json({ error: "Not in room" }, { status: 403 });
     }
@@ -62,7 +73,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
           data: { status: "IN_GAME" },
         });
       } else {
-        return NextResponse.json({ error: "Game not in progress" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Game not in progress" },
+          { status: 400 }
+        );
       }
     }
 
@@ -72,7 +86,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Validate move
-    const board = (room.board_state as (string | null)[] | null) ?? Array(9).fill(null);
+    const board = (room.board_state as (string | null)[] | null)
+      ? (room.board_state as (string | null)[])
+      : Array(9).fill(null);
     if (board[cell] !== null) {
       return NextResponse.json({ error: "Cell occupied" }, { status: 400 });
     }
@@ -135,13 +151,22 @@ export async function POST(req: NextRequest, context: RouteContext) {
  */
 function checkWinner(board: (string | null)[]): string | null {
   const lines = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-    [0, 4, 8], [2, 4, 6], // diagonals
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8], // rows
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8], // columns
+    [0, 4, 8],
+    [2, 4, 6], // diagonals
   ];
 
   for (const [a, b, c] of lines) {
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+    if (
+      board[a] &&
+      board[a] === board[b] &&
+      board[a] === board[c]
+    ) {
       return board[a];
     }
   }
