@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listAllRooms, deleteLobbyRoom, createTicTacToeRoom, joinTicTacToeRoom, type RoomInfo } from "./actions";
+import { listAllRooms, deleteLobbyRoom, createTicTacToeRoom, type RoomInfo } from "./actions";
 import { logoutUser } from "@/app/auth/actions";
 import { ArrowLeft, Plus, RefreshCw, Trash2, Users, LogIn } from "lucide-react";
 import Link from "next/link";
@@ -24,8 +24,6 @@ export default function LobbyContent({ userId }: LobbyContentProps) {
 
   useEffect(() => {
     loadRooms();
-    const interval = setInterval(loadRooms, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleCreateRoom = async () => {
@@ -44,21 +42,9 @@ export default function LobbyContent({ userId }: LobbyContentProps) {
     }
   };
 
-  const handleJoinRoom = async (room: RoomInfo) => {
-    setLoading(true);
-    const gameType = room.game_type === "tic-tac-toe" ? "tic-tac-toe" : "generic";
-
-    try {
-      if (gameType === "tic-tac-toe") {
-        await joinTicTacToeRoom(room.id, "");
-      }
-      router.push(`/play/tic-tac-toe/${room.id}`);
-    } catch (error) {
-      console.error("Failed to join room:", error);
-      alert("Failed to join room");
-    } finally {
-      setLoading(false);
-    }
+  const handleJoinRoom = (room: RoomInfo) => {
+    // Navigate to room - joining happens automatically via SSE connection
+    router.push(`/play/tic-tac-toe/${room.id}`);
   };
 
   const handleDeleteRoom = async (room: RoomInfo) => {
@@ -185,7 +171,7 @@ export default function LobbyContent({ userId }: LobbyContentProps) {
                     >
                       <div className="min-w-0 flex-1">
                         <div className="font-medium truncate text-white">
-                          {room.name || room.id}
+                          Room {room.id.slice(0, 8)}
                         </div>
                         <div className="text-xs text-white/50 mt-1 flex flex-wrap gap-x-4 gap-y-1">
                           <span>

@@ -10,6 +10,7 @@ import { getSession } from "@/lib/auth/auth-session";
 import { roomManager, Room } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import TicTacToeGame from "./lib/TicTacToeGame";
+import { PlayerRole } from "./lib/TicTacToePlayerSlot";
 
 // =============================================================================
 // TYPES
@@ -17,7 +18,6 @@ import TicTacToeGame from "./lib/TicTacToeGame";
 
 export interface RoomInfo {
   id: string;
-  name: string | null;
   game_type: string;
   status: string;
   owner: { id: number; display_name: string } | null;
@@ -42,8 +42,10 @@ async function getOrLoadRoom(roomId: string): Promise<Room | null> {
   let room = roomManager.getRoom(roomId);
   if (room) return room;
 
+  // Load room WITH players from Prisma
   const dbRoom = await prisma.room.findUnique({
     where: { id: roomId },
+    include: { players: true },
   });
 
   if (!dbRoom) return null;
@@ -51,6 +53,13 @@ async function getOrLoadRoom(roomId: string): Promise<Room | null> {
   const game = new TicTacToeGame();
   game.init();
   game.restoreState(dbRoom);
+
+  // Restore player slots from Prisma data
+  for (const player of dbRoom.players) {
+    if (player.role === "X" || player.role === "O") {
+      game.playerslot.roles[player.role as PlayerRole] = player.user_id.toString();
+    }
+  }
 
   room = roomManager.attachGame(
     dbRoom.id,
@@ -77,6 +86,45 @@ async function syncRoomToDb(roomId: string, room: Room) {
   });
 }
 
+/**
+ * Broadcast full Prisma snapshot to all room subscribers.
+ */
+async function broadcastRoomSnapshot(roomId: string, event: string) {
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+    include: {
+      players: {
+        include: { user: { select: { id: true, display_name: true } } },
+      },
+    },
+  });
+
+  if (!room) return;
+
+  const board = (room.board_state as (string | null)[]) || Array(9).fill(null);
+  const isDraw = !room.winner_role && board.every((c) => c !== null);
+
+  broadcaster.broadcast(
+    roomId,
+    JSON.stringify({
+      event,
+      roomId: room.id,
+      status: room.status,
+      board,
+      currentTurn: room.current_turn,
+      winner: room.winner_role,
+      isDraw,
+      players: room.players.map((p) => ({
+        userId: p.user_id,
+        displayName: p.user.display_name,
+        role: p.role,
+        isConnected: true,
+      })),
+      maxPlayers: room.max_players,
+    })
+  );
+}
+
 // =============================================================================
 // LOBBY ACTIONS
 // =============================================================================
@@ -86,7 +134,6 @@ export async function listAllRooms(): Promise<RoomInfo[]> {
     where: { game_type: "tic-tac-toe" },
     select: {
       id: true,
-      name: true,
       game_type: true,
       status: true,
       max_players: true,
@@ -102,7 +149,6 @@ export async function listAllRooms(): Promise<RoomInfo[]> {
 
   return rooms.map((room) => ({
     id: room.id,
-    name: room.name,
     game_type: room.game_type,
     status: room.status,
     owner: room.owner,
@@ -170,7 +216,6 @@ export async function getRoomMeta(roomId: string) {
 
   return {
     id: room.id,
-    name: room.name,
     game_type: room.game_type,
     status: room.status,
     owner: room.owner,
@@ -191,9 +236,12 @@ export async function createTicTacToeRoom(roomId?: string, ownerId?: string) {
   }
 
   try {
+    // Generate roomId if not provided
+    const generatedRoomId = roomId || `room-${Math.random().toString(36).substring(2, 9)}`;
+
     const room = await prisma.room.create({
       data: {
-        name: roomId || null,
+        id: generatedRoomId,
         game_type: "tic-tac-toe",
         owner_id: session.userId,
         max_players: 2,
@@ -214,25 +262,22 @@ export async function createTicTacToeRoom(roomId?: string, ownerId?: string) {
   }
 }
 
+/**
+ * @deprecated Joining now happens automatically via SSE connection.
+ * This function is kept for backward compatibility.
+ */
 export async function joinTicTacToeRoom(roomId: string, playerId: string) {
   const session = await getSession();
   if (!session) {
     return { ok: false, state: null };
   }
 
-  try {
-    const room = await getOrLoadRoom(roomId);
-    if (!room) {
-      return { ok: false, state: null };
-    }
+  // Just verify room exists - actual joining happens via SSE
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+  });
 
-    const ok = room.addPlayer(session.userId.toString());
-
-    return { ok, state: room.status };
-  } catch (error) {
-    console.error("Failed to join room:", error);
-    return { ok: false, state: null };
-  }
+  return { ok: !!room, state: room?.status ?? null };
 }
 
 export async function submitTicTacToeMove(
@@ -255,6 +300,8 @@ export async function submitTicTacToeMove(
 
     if (success) {
       await syncRoomToDb(roomId, room);
+      // Broadcast updated state from Prisma
+      await broadcastRoomSnapshot(roomId, "game_move");
     }
 
     return { ok: success, snapshot: room.getSnapshot() };
@@ -281,6 +328,8 @@ export async function startTicTacToeGame(roomId: string) {
         where: { id: roomId },
         data: { status: "IN_GAME" },
       });
+      // Broadcast game start from Prisma
+      await broadcastRoomSnapshot(roomId, "game_start");
     }
 
     return { ok: started };

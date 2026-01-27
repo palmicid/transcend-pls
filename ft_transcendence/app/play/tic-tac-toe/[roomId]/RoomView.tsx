@@ -1,7 +1,10 @@
 /**
  * @file RoomView.tsx
- * @description Client component for displaying and interacting with a Tic-Tac-Toe game room.
- * Uses glassmorphism design matching the main application theme.
+ * @description Game room view with player slots, board, and status.
+ * Always displays:
+ * - Player slots (X and O) with user info + connection status
+ * - Game board (disabled when not in game or not your turn)
+ * - Status banner
  */
 
 "use client";
@@ -10,8 +13,8 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { leaveLobbyRoom, submitTicTacToeMove, startTicTacToeGame } from "../actions";
-import useGameSSE from "@/hooks/useGameSSE";
-import { ArrowLeft, LogOut, Circle, X, Play, Loader2 } from "lucide-react";
+import useGameSSE, { PlayerInfo } from "@/hooks/useGameSSE";
+import { ArrowLeft, LogOut, Circle, X, Play, Loader2, User, Wifi, WifiOff } from "lucide-react";
 
 export type GameType = "tic-tac-toe";
 
@@ -20,39 +23,51 @@ interface RoomViewProps {
   userId: string;
   gameType: GameType;
   initialState: string | null;
-  sseToken: string;
 }
 
-export default function RoomView({ roomId, userId, gameType, initialState, sseToken }: RoomViewProps) {
+export default function RoomView({ roomId, userId, gameType, initialState }: RoomViewProps) {
   const router = useRouter();
-
-  // Use resilient SSE hook
-  const { snapshot, isConnected, error: connectionError } = useGameSSE(
+  const sseUrl = `/play/tic-tac-toe/sse/${roomId}`;
+  const { snapshot, isConnected, myRole, error: connectionError } = useGameSSE(
     roomId,
-    sseToken,
-    `/play/tic-tac-toe/sse/${roomId}`
+    sseUrl,
+    Number(userId)
   );
 
-  // Derive game state
-  const roomStatus = (snapshot?.status as string) || initialState;
-  const currentBoard = (snapshot?.board as (string | null)[]) || Array(9).fill(null);
-  const currentTurn = (snapshot?.currentTurn as string) || "X";
-  const winner = snapshot?.winner as string | null;
-  const isDraw = snapshot?.is_draw as boolean;
+  // Derive state from snapshot
+  const roomStatus = snapshot?.status || initialState || "OPEN";
+  const board = snapshot?.board || Array(9).fill(null);
+  const currentTurn = snapshot?.currentTurn || "X";
+  const winner = snapshot?.winner || null;
+  const isDraw = snapshot?.isDraw || false;
+  const players = snapshot?.players || [];
 
-  // === ACTION HANDLERS ===
+  // Game state helpers
+  const isGameInProgress = roomStatus === "IN_GAME";
+  const isGameEnded = roomStatus === "ENDED" || !!winner || isDraw;
+  const canStartGame = roomStatus === "READY" && players.length >= 2;
+  const isMyTurn = isGameInProgress && myRole === currentTurn;
+  const canClickBoard = isGameInProgress && isMyTurn && !winner && !isDraw;
 
+  // Get player by role
+  const getPlayerByRole = (role: string): PlayerInfo | undefined => {
+    return players.find((p) => p.role === role);
+  };
+
+  const playerX = getPlayerByRole("X");
+  const playerO = getPlayerByRole("O");
+
+  // Action handlers
   const handleStart = useCallback(async () => {
-    if (gameType === "tic-tac-toe") {
-      await startTicTacToeGame(roomId);
-    }
-  }, [roomId, gameType]);
+    await startTicTacToeGame(roomId);
+  }, [roomId]);
 
   const handleMove = useCallback(
     async (cell: number) => {
+      if (!canClickBoard) return;
       await submitTicTacToeMove(roomId, userId, cell);
     },
-    [roomId, userId]
+    [roomId, userId, canClickBoard]
   );
 
   const handleLeave = useCallback(async () => {
@@ -60,11 +75,85 @@ export default function RoomView({ roomId, userId, gameType, initialState, sseTo
     router.push("/play/tic-tac-toe");
   }, [roomId, userId, router]);
 
-  // === UI HELPERS ===
+  // Render player slot
+  const renderPlayerSlot = (role: "X" | "O", player?: PlayerInfo) => {
+    const isX = role === "X";
+    const bgColor = isX ? "bg-cyan-500/10" : "bg-fuchsia-500/10";
+    const borderColor = isX ? "border-cyan-500/30" : "border-fuchsia-500/30";
+    const textColor = isX ? "text-cyan-400" : "text-fuchsia-400";
+    const Icon = isX ? X : Circle;
+    const isCurrentTurn = isGameInProgress && currentTurn === role;
+    const isMe = myRole === role;
 
-  const canStartGame = roomStatus === "READY";
-  const isGameInProgress = roomStatus === "IN_GAME";
-  const isGameEnded = roomStatus === "ENDED";
+    return (
+      <div
+        className={`
+          rounded-2xl border p-4 ${bgColor} ${borderColor}
+          ${isCurrentTurn ? "ring-2 ring-white/30" : ""}
+          ${isMe ? "ring-1 ring-white/20" : ""}
+        `}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Icon className={`h-5 w-5 ${textColor}`} />
+            <span className={`font-semibold ${textColor}`}>{role}</span>
+            {isMe && (
+              <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/70">
+                You
+              </span>
+            )}
+          </div>
+          {player && (
+            <span className="flex items-center gap-1 text-xs">
+              {player.isConnected ? (
+                <Wifi className="h-3 w-3 text-emerald-400" />
+              ) : (
+                <WifiOff className="h-3 w-3 text-red-400" />
+              )}
+            </span>
+          )}
+        </div>
+        {player ? (
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-white/50" />
+            <span className="text-sm text-white truncate">{player.displayName}</span>
+          </div>
+        ) : (
+          <div className="text-sm text-white/40 flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Waiting...
+          </div>
+        )}
+        {isCurrentTurn && (
+          <div className={`mt-2 text-xs font-medium ${isMe ? "text-emerald-300" : "text-amber-300"}`}>
+            {isMe ? "→ Your turn!" : "← Playing..."}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Status message
+  const getStatusMessage = () => {
+    if (!isConnected) return { text: "Connecting...", color: "text-white/50" };
+    if (winner) {
+      const didIWin = winner === myRole;
+      return {
+        text: didIWin ? "🎉 You Win!" : `😔 ${winner} Wins`,
+        color: didIWin ? "text-emerald-300" : "text-red-300",
+      };
+    }
+    if (isDraw) return { text: "🤝 It's a Draw!", color: "text-amber-300" };
+    if (isGameInProgress) {
+      return isMyTurn
+        ? { text: "🎯 Your turn — make a move!", color: "text-emerald-300" }
+        : { text: "⏳ Opponent's turn...", color: "text-white/60" };
+    }
+    if (canStartGame) return { text: "✓ Both players ready! Click Start.", color: "text-emerald-300" };
+    return { text: `Waiting for players (${players.length}/2)`, color: "text-white/50" };
+  };
+
+  const status = getStatusMessage();
 
   return (
     <div className="space-y-6">
@@ -81,47 +170,25 @@ export default function RoomView({ roomId, userId, gameType, initialState, sseTo
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Room: {roomId}
             </h1>
-            <div className="flex items-center gap-3 text-sm text-white/60 mt-1">
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    isConnected ? "bg-emerald-400" : "bg-red-400"
-                  }`}
-                />
-                {isConnected ? "Connected" : "Disconnected"}
-              </span>
-              <span>•</span>
-              <span>
-                Status:{" "}
-                <span
-                  className={`font-semibold ${
-                    roomStatus === "IN_GAME"
-                      ? "text-amber-300"
-                      : roomStatus === "READY"
-                      ? "text-emerald-300"
-                      : roomStatus === "ENDED"
-                      ? "text-cyan-300"
-                      : "text-white/70"
-                  }`}
-                >
-                  {roomStatus ?? "Loading..."}
-                </span>
-              </span>
+            <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
+              <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-400" : "bg-red-400"}`} />
+              {isConnected ? "Connected" : "Connecting..."}
+              {myRole && (
+                <>
+                  <span>•</span>
+                  <span>You are <span className={myRole === "X" ? "text-cyan-400" : "text-fuchsia-400"}>{myRole}</span></span>
+                </>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-            Playing as: <span className="font-semibold text-cyan-300">{userId}</span>
-          </span>
-          <button
-            onClick={handleLeave}
-            className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20 transition flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Leave
-          </button>
-        </div>
+        <button
+          onClick={handleLeave}
+          className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20 transition flex items-center gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          Leave
+        </button>
       </div>
 
       {connectionError && (
@@ -130,46 +197,29 @@ export default function RoomView({ roomId, userId, gameType, initialState, sseTo
         </div>
       )}
 
-      {/* Game Panel */}
+      {/* Main Game Area */}
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 backdrop-blur-xl">
-        <div className="max-w-md mx-auto space-y-6">
-          {/* Status Message */}
-          {!isGameInProgress && !winner && !isDraw && (
-            <div className="text-center py-4 px-6 rounded-2xl border border-white/10 bg-white/[0.02]">
-              {canStartGame ? (
-                <div className="text-emerald-300 font-medium">
-                  ✓ Both players ready! Click Start to begin.
-                </div>
-              ) : (
-                <div className="text-white/50 flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Waiting for players to join...
-                </div>
-              )}
-            </div>
-          )}
+        <div className="max-w-lg mx-auto space-y-6">
+          {/* Player Slots */}
+          <div className="grid grid-cols-2 gap-4">
+            {renderPlayerSlot("X", playerX)}
+            {renderPlayerSlot("O", playerO)}
+          </div>
 
-          {/* Current Turn Indicator */}
-          {(isGameInProgress || isGameEnded || winner) && !isDraw && !winner && (
-            <div className="text-center">
-              <span className="text-white/60">Current Turn: </span>
-              <span
-                className={`text-xl font-bold ${
-                  currentTurn === "X" ? "text-cyan-400" : "text-fuchsia-400"
-                }`}
-              >
-                {currentTurn}
-              </span>
-            </div>
-          )}
+          {/* Status Banner */}
+          <div className={`text-center py-3 px-4 rounded-2xl border border-white/10 bg-white/[0.02] ${status.color}`}>
+            {status.text}
+          </div>
 
           {/* Game Board */}
-          {(isGameInProgress || isGameEnded || winner || isDraw) && (
-            <div className="grid grid-cols-3 gap-3 w-64 mx-auto">
-              {currentBoard.map((cell, idx) => (
+          <div className="grid grid-cols-3 gap-3 w-64 mx-auto">
+            {board.map((cell, idx) => {
+              const isCellDisabled = !canClickBoard || cell !== null;
+              return (
                 <button
                   key={idx}
                   onClick={() => handleMove(idx)}
+                  disabled={isCellDisabled}
                   className={`
                     aspect-square rounded-2xl border-2 text-3xl font-bold transition-all duration-200
                     flex items-center justify-center
@@ -178,52 +228,35 @@ export default function RoomView({ roomId, userId, gameType, initialState, sseTo
                         ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
                         : cell === "O"
                         ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-400"
-                        : !winner && !isDraw
+                        : canClickBoard
                         ? "border-white/10 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/20 cursor-pointer"
-                        : "border-white/5 bg-white/[0.01] cursor-not-allowed"
+                        : "border-white/5 bg-white/[0.01] cursor-not-allowed opacity-50"
                     }
                   `}
-                  disabled={!!winner || !!isDraw || cell !== null}
                 >
                   {cell === "X" && <X className="h-8 w-8" />}
                   {cell === "O" && <Circle className="h-7 w-7" />}
                 </button>
-              ))}
-            </div>
-          )}
-
-          {/* Winner/Draw Announcement */}
-          {winner && (
-            <div className="text-center py-6 px-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10">
-              <p className="text-2xl font-bold text-emerald-300">
-                🎉 {winner} Wins!
-              </p>
-            </div>
-          )}
-          {isDraw && (
-            <div className="text-center py-6 px-6 rounded-2xl border border-amber-500/30 bg-amber-500/10">
-              <p className="text-2xl font-bold text-amber-300">
-                🤝 It&apos;s a Draw!
-              </p>
-            </div>
-          )}
+              );
+            })}
+          </div>
 
           {/* Start Button */}
           <div className="flex justify-center">
             <button
               onClick={handleStart}
-              disabled={!canStartGame || isGameInProgress}
+              disabled={!canStartGame || isGameInProgress || isGameEnded}
               className={`
                 rounded-2xl px-8 py-3 font-semibold transition-all duration-200 flex items-center gap-2
                 ${
-                  canStartGame && !isGameInProgress
+                  canStartGame && !isGameInProgress && !isGameEnded
                     ? "bg-white text-zinc-950 hover:opacity-90"
                     : "bg-white/10 text-white/30 cursor-not-allowed"
                 }
               `}
             >
               <Play className="h-5 w-5" />
-              {isGameInProgress ? "Game in Progress" : "Start Game"}
+              {isGameEnded ? "Game Over" : isGameInProgress ? "Game in Progress" : "Start Game"}
             </button>
           </div>
         </div>

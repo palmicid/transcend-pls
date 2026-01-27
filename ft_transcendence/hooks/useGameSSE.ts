@@ -1,76 +1,68 @@
 /**
  * @file hooks/useGameSSE.ts
- * @description Hook for real-time game updates via Express SSE.
+ * @description Hook for real-time game updates via SSE.
  *
- * Connects to Express SSE server using JWT token from Next.js.
- * Handles connection state, reconnection, and message parsing.
- *
- * @example
- * ```tsx
- * function GameComponent({ roomId, sseToken }) {
- *   const { snapshot, isConnected } = useGameSSE(roomId, sseToken);
- *
- *   return (
- *     <div>
- *       {isConnected ? "Connected" : "Connecting..."}
- *       <GameBoard board={snapshot?.board} />
- *     </div>
- *   );
- * }
- * ```
+ * Connects to SSE endpoint using session cookies.
+ * Parses snapshots from Prisma and updates local state.
  */
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
-const EXPRESS_URL = process.env.NEXT_PUBLIC_EXPRESS_URL || "http://localhost:3001";
+// =============================================================================
+// TYPES
+// =============================================================================
 
-export interface GameSnapshot {
-  board?: (string | null)[];
-  current_turn?: string | null;
-  winner?: string | null;
-  is_draw?: boolean;
-  [key: string]: unknown;
+export interface PlayerInfo {
+  userId: number;
+  displayName: string;
+  role: string | null;
+  isConnected: boolean;
+}
+
+export interface RoomSnapshot {
+  roomId: string;
+  status: string;
+  board: (string | null)[];
+  currentTurn: string | null;
+  winner: string | null;
+  isDraw: boolean;
+  players: PlayerInfo[];
+  maxPlayers: number;
+  myRole?: string | null;
 }
 
 export interface UseGameSSEResult {
-  /** Current game snapshot from SSE events */
-  snapshot: GameSnapshot | null;
+  /** Full room snapshot from Prisma */
+  snapshot: RoomSnapshot | null;
   /** Whether SSE connection is established */
   isConnected: boolean;
+  /** Player's role in the game (X, O) */
+  myRole: string | null;
   /** Any connection error message */
   error: string | null;
+  /** Last event type received */
+  lastEvent: string | null;
 }
 
-/**
- * Hook for subscribing to game updates via SSE.
- *
- * @param roomId - The room to subscribe to
- * @param token - SSE token from the join API
- * @returns Connection state and game snapshot
- */
-export function useGameSSE(roomId: string, token: string, customUrl?: string): UseGameSSEResult {
-  const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
+// =============================================================================
+// HOOK
+// =============================================================================
+
+export function useGameSSE(roomId: string, sseUrl: string, userId?: number): UseGameSSEResult {
+  const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [myRole, setMyRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!roomId || !token) return;
+    if (!roomId || !sseUrl) return;
 
-    // Use custom URL if provided, otherwise fall back to Express URL
-    let url: string;
-    if (customUrl) {
-      // Append token to custom URL
-      const separator = customUrl.includes("?") ? "&" : "?";
-      url = `${customUrl}${separator}token=${encodeURIComponent(token)}`;
-    } else {
-      url = `${EXPRESS_URL}/event/${roomId}?token=${encodeURIComponent(token)}`;
-    }
+    console.log("[SSE] Connecting to:", sseUrl);
 
-    console.log("[SSE] Connecting to:", url);
-
-    const eventSource = new EventSource(url);
+    const eventSource = new EventSource(sseUrl, { withCredentials: true });
 
     eventSource.onopen = () => {
       console.log("[SSE] Connection opened");
@@ -80,42 +72,50 @@ export function useGameSSE(roomId: string, token: string, customUrl?: string): U
 
     eventSource.onmessage = (event) => {
       try {
-        // Some SSE implementations might send data update without "data:" prefix handling if raw,
-        // but EventSource standard handles 'data: ...' lines and puts payload in event.data
         const data = JSON.parse(event.data);
-        // console.log("[SSE] Message:", data); // verbose
 
-        // Handle different event types
-        if (data.event === "connected") {
-          setIsConnected(true);
-        } else if (data.event === "ping") {
-          // Keep-alive, no action needed
-        } else if (data.board !== undefined) {
-          // Direct game state update
-          setSnapshot((prev) => ({ ...prev, ...data }));
-        } else if (data.snapshot) {
-          // Wrapped snapshot or full room update
-          // If it's a room update containing 'snapshot' field, use that
-          setSnapshot(data.snapshot);
-        } else if (data.data) {
-           // Handle nested data if needed (some broadcasters might double wrap)
-           // But based on our route, we send { data: JSON.parse(jsonString) } implicitly?
-           // No, route sends: send({ data: "..." }) -> Client gets "..." as event.data.
-           // So JSON.parse(event.data) IS the payload.
-           // Our payload has { event, roomId, state, snapshot }
-           if (data.snapshot) {
-             setSnapshot(data.snapshot);
-           }
+        // Track event type
+        if (data.event) {
+          setLastEvent(data.event);
+        }
+
+        // Update snapshot from any event that includes room data
+        if (data.roomId && data.board !== undefined) {
+          const players: PlayerInfo[] = data.players || [];
+
+          // Derive myRole whenever we have players data and a userId
+          if (userId) {
+            const derived = players.find((p) => p.userId === userId)?.role || null;
+            if (derived) {
+              setMyRole(derived);
+            }
+          }
+
+          // Update myRole if provided explicitly (initial snapshot)
+          if (data.myRole) {
+            setMyRole(data.myRole);
+          }
+
+          setSnapshot({
+            roomId: data.roomId,
+            status: data.status,
+            board: data.board,
+            currentTurn: data.currentTurn,
+            winner: data.winner,
+            isDraw: data.isDraw,
+            players,
+            maxPlayers: data.maxPlayers || 2,
+            myRole: data.myRole,
+          });
         }
       } catch (err) {
         console.error("[SSE] Parse error:", err);
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error("[SSE] Error:", err);
+    eventSource.onerror = () => {
+      console.error("[SSE] Connection error");
       setIsConnected(false);
-
       if (eventSource.readyState === EventSource.CLOSED) {
         setError("Connection closed");
       }
@@ -125,9 +125,9 @@ export function useGameSSE(roomId: string, token: string, customUrl?: string): U
       console.log("[SSE] Closing connection");
       eventSource.close();
     };
-  }, [roomId, token, customUrl]);
+  }, [roomId, sseUrl]);
 
-  return { snapshot, isConnected, error };
+  return { snapshot, isConnected, myRole, error, lastEvent };
 }
 
 export default useGameSSE;

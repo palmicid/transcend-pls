@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { getSession } from "@/lib/auth/auth-session";
 import { getRoomMeta } from "../actions";
-import { generateSSEToken } from "@/lib/auth/sse-token";
 import { MainLayout } from "@/components/layout/MainLayout";
 import RoomView, { GameType } from "./RoomView";
 
@@ -32,9 +31,6 @@ export default async function RoomPage({ params, searchParams }: PageProps) {
     throw new Error("Room not found");
   }
 
-  // Generate short-lived SSE token
-  const sseToken = await generateSSEToken(roomId, session.userId);
-
   const requestedGame = resolvedSearch?.game === "tic-tac-toe" ? "tic-tac-toe" : undefined;
   const resolvedGame: GameType = requestedGame
     ? requestedGame
@@ -49,7 +45,6 @@ export default async function RoomPage({ params, searchParams }: PageProps) {
         userId={session.userId.toString()}
         gameType={resolvedGame}
         initialState={meta.status}
-        sseToken={sseToken}
       />
     </MainLayout>
   );
