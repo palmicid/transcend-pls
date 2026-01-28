@@ -7,10 +7,9 @@
 
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth/auth-session";
-import { roomManager, Room } from "@/lib/rooms";
+import { roomManager, Room, loadAndValidateRoom } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import TicTacToeGame from "./lib/TicTacToeGame";
-import { PlayerRole } from "./lib/TicTacToePlayerSlot";
 
 // =============================================================================
 // TYPES
@@ -37,39 +36,6 @@ export interface TicTacToeSnapshot {
 // =============================================================================
 // INTERNAL HELPERS
 // =============================================================================
-
-async function getOrLoadRoom(roomId: string): Promise<Room | null> {
-  let room = roomManager.getRoom(roomId);
-  if (room) return room;
-
-  // Load room WITH players from Prisma
-  const dbRoom = await prisma.room.findUnique({
-    where: { id: roomId },
-    include: { players: true },
-  });
-
-  if (!dbRoom) return null;
-
-  const game = new TicTacToeGame();
-  game.init();
-  game.restoreState(dbRoom);
-
-  // Restore player slots from Prisma data
-  for (const player of dbRoom.players) {
-    if (player.role === "X" || player.role === "O") {
-      game.playerslot.roles[player.role as PlayerRole] = player.user_id.toString();
-    }
-  }
-
-  room = roomManager.attachGame(
-    dbRoom.id,
-    game,
-    broadcaster,
-    dbRoom.owner_id.toString()
-  );
-
-  return room;
-}
 
 async function syncRoomToDb(roomId: string, room: Room) {
   const snapshot = room.getSnapshot() as TicTacToeSnapshot | null;
@@ -291,7 +257,7 @@ export async function submitTicTacToeMove(
   }
 
   try {
-    const room = await getOrLoadRoom(roomId);
+    const room = await loadAndValidateRoom(roomId);
     if (!room) {
       return { ok: false, snapshot: null };
     }
@@ -318,7 +284,7 @@ export async function startTicTacToeGame(roomId: string) {
   }
 
   try {
-    const room = await getOrLoadRoom(roomId);
+    const room = await loadAndValidateRoom(roomId);
     if (!room) return { ok: false };
 
     const started = room.start();

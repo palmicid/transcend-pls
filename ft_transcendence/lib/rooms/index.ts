@@ -11,3 +11,9 @@
 export { default as Room } from "./Room";
 export { default as RoomState, State } from "./RoomState";
 export { default as RoomManager, roomManager, type RoomMeta } from "./RoomManager";
+export {
+  loadAndValidateRoom,
+  loadAndValidateRoomSafe,
+  type RoomValidationError,
+  type DatabaseRoom,
+} from "./loadAndValidateRoom";
