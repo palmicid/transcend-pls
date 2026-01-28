@@ -164,13 +164,18 @@ export default function LobbyContent({ userId }: LobbyContentProps) {
               ) : (
                 rooms.map((room) => {
                   const isOwner = room.owner?.id.toString() === userId;
+                  const isOpen = room.status === "OPEN";
                   return (
                     <div
                       key={room.id}
-                      className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] transition group"
+                      className={`flex items-center justify-between p-4 rounded-2xl border transition group ${
+                        isOpen
+                          ? "border-green-500/50 bg-gradient-to-r from-green-500/15 to-green-500/5 hover:from-green-500/25 hover:to-green-500/10 shadow-lg shadow-green-500/10"
+                          : "border-white/10 bg-white/[0.02] hover:bg-white/[0.06]"
+                      }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate text-white">
+                        <div className={`font-medium truncate ${isOpen ? "text-green-100" : "text-white"}`}>
                           Room {room.id.slice(0, 8)}
                         </div>
                         <div className="text-xs text-white/50 mt-1 flex flex-wrap gap-x-4 gap-y-1">
@@ -186,7 +191,9 @@ export default function LobbyContent({ userId }: LobbyContentProps) {
                               room.status === "IN_GAME"
                                 ? "text-amber-300"
                                 : room.status === "READY"
-                                ? "text-emerald-300"
+                                ? "text-blue-300"
+                                : room.status === "OPEN"
+                                ? "text-green-300 animate-pulse"
                                 : "text-white/70"
                             }`}>
                               {room.status}
@@ -217,7 +224,11 @@ export default function LobbyContent({ userId }: LobbyContentProps) {
                         <button
                           onClick={() => handleJoinRoom(room)}
                           disabled={loading}
-                          className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-300 hover:bg-cyan-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          className={`rounded-xl border px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                            isOpen
+                              ? "border-green-400/50 bg-green-500/20 text-green-200 hover:bg-green-500/30 shadow-lg shadow-green-500/20"
+                              : "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+                          }`}
                         >
                           <LogIn className="h-4 w-4" />
                           Join
