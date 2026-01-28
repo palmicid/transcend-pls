@@ -15,7 +15,7 @@ import { getSession } from "@/lib/auth/auth-session";
 import { roomManager, Room, loadAndValidateRoom } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import TicTacToeGame from "./lib/TicTacToeGame";
-import { BOT_PLAYER_ID, type BotDifficulty } from "./lib/TicTacToeBot";
+import { type BotDifficulty } from "./lib/TicTacToeBot";
 
 // =============================================================================
 // TYPES
