@@ -63,6 +63,37 @@ export interface RoomValidationError {
 // =============================================================================
 
 /**
+ * Winning line combinations on a 3x3 board.
+ * Each array contains the indices of a winning line.
+ */
+const WINNING_LINES = [
+  [0, 1, 2], // Top row
+  [3, 4, 5], // Middle row
+  [6, 7, 8], // Bottom row
+  [0, 3, 6], // Left column
+  [1, 4, 7], // Middle column
+  [2, 5, 8], // Right column
+  [0, 4, 8], // Diagonal top-left to bottom-right
+  [2, 4, 6], // Diagonal top-right to bottom-left
+];
+
+/**
+ * Check if there's a winner on the board based on winning patterns.
+ *
+ * @param board - The board state (array of 9 cells)
+ * @returns The winning player role ("X" or "O"), or null if no winner
+ */
+function checkBoardWinner(board: (string | null)[]): string | null {
+  for (const [a, b, c] of WINNING_LINES) {
+    const player = board[a];
+    if (player && board[b] === player && board[c] === player) {
+      return player;
+    }
+  }
+  return null;
+}
+
+/**
  * Validate loaded room state for consistency.
  *
  * @returns Array of validation errors (empty if valid). If any error has
@@ -198,10 +229,39 @@ function validateRoomState(dbRoom: DatabaseRoom): RoomValidationError[] {
     });
   }
 
+  // Validate winner consistency with board state
+  const boardWinner = checkBoardWinner(board);
+  const isDraw = board.every((c) => c !== null) && !boardWinner;
+
+  // Check if there's a winning pattern on the board but no winner_role is set
+  if (boardWinner && !dbRoom.winner_role) {
+    errors.push({
+      code: "INVALID_BOARD_STATE",
+      message: `Board shows a winning pattern for ${boardWinner} but winner_role is not set`,
+      severity: "error",
+    });
+  }
+
+  // Check if winner_role is set but doesn't match the actual winner on the board
+  if (dbRoom.winner_role && boardWinner && dbRoom.winner_role !== boardWinner) {
+    errors.push({
+      code: "INVALID_BOARD_STATE",
+      message: `winner_role is ${dbRoom.winner_role} but board shows ${boardWinner} as the winner`,
+      severity: "error",
+    });
+  }
+
+  // Check if winner_role is set but there's no winning pattern on the board
+  if (dbRoom.winner_role && !boardWinner && !isDraw) {
+    errors.push({
+      code: "INVALID_BOARD_STATE",
+      message: `winner_role is set to ${dbRoom.winner_role} but there's no winning pattern on the board`,
+      severity: "error",
+    });
+  }
+
   // Warn if status is ENDED but has no winner and not a draw
   if (dbRoom.status === "ENDED") {
-    const board = (dbRoom.board_state as (string | null)[]) || Array(9).fill(null);
-    const isDraw = board.every((c) => c !== null);
     if (!dbRoom.winner_role && !isDraw) {
       errors.push({
         code: "INVALID_STATUS_TRANSITION",
