@@ -372,24 +372,24 @@ export default class TicTacToeGame extends Game<
    * With a bot, only need 1 human player.
    */
   get isReady2Start(): boolean {
-    console.log("[TicTacToeGame.isReady2Start] Checking:", {
+    logger.debug({
       hasBot: this.gameConfig.hasBot,
       botRole: this.gameConfig.botRole,
       botDifficulty: this.gameConfig.botDifficulty,
       playerSlotRoles: this.playerslot.roles,
       isFull: this.playerslot.isFull,
-    });
+    }, "[TicTacToeGame.isReady2Start] Checking");
 
     if (this.gameConfig.hasBot) {
       // With bot, need 1 human player (bot is already in slot)
       const humanRole = this.gameConfig.botRole === "X" ? "O" : "X";
       const humanPlayerId = this.playerslot.roles[humanRole];
       const isReady = humanPlayerId !== null && humanPlayerId !== BOT_PLAYER_ID;
-      console.log("[TicTacToeGame.isReady2Start] Bot game check:", {
+      logger.debug({
         humanRole,
         humanPlayerId,
         isReady,
-      });
+      }, "[TicTacToeGame.isReady2Start] Bot game check");
       return isReady;
     }
     return this.playerslot.isFull;
