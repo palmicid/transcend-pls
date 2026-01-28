@@ -121,6 +121,18 @@ function validateRoomState(dbRoom: DatabaseRoom): RoomValidationError[] {
       severity: "error",
     });
   } else {
+    // Validate that each cell contains only valid values (X, O, or null)
+    for (let i = 0; i < board.length; i++) {
+      const cell = board[i];
+      if (cell !== null && cell !== "X" && cell !== "O") {
+        errors.push({
+          code: "INVALID_BOARD_STATE",
+          message: `Board cell ${i} contains invalid value: ${cell}`,
+          severity: "error",
+        });
+      }
+    }
+
     // Count X and O on the board
     const boardXCount = board.filter((c) => c === "X").length;
     const boardOCount = board.filter((c) => c === "O").length;
