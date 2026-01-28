@@ -15,6 +15,7 @@ import { getSession } from "@/lib/auth/auth-session";
 import { loadAndValidateRoomSafe } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import prisma from "@/lib/prisma";
+import { getTotalPlayerCount } from "@/app/play/tic-tac-toe/lib/BotHelpers";
 
 // =============================================================================
 // TYPES
@@ -121,7 +122,10 @@ async function addPlayerToRoom(roomId: string, userId: number): Promise<string |
   });
 
   if (!room) return null;
-  if (room.players.length >= room.max_players) return null;
+  
+  // Check if room is full, accounting for bot as a player
+  const currentPlayers = getTotalPlayerCount(room.players.length, room.bot_role, room.bot_difficulty);
+  if (currentPlayers >= room.max_players) return null;
 
   const hasX = room.players.some((p) => p.role === "X");
   const role = hasX ? "O" : "X";
@@ -131,7 +135,9 @@ async function addPlayerToRoom(roomId: string, userId: number): Promise<string |
   });
 
   // Update room status if now full
-  if (room.players.length + 1 >= room.max_players) {
+  // Account for bot - if bot is configured, it counts as a player
+  const totalPlayers = getTotalPlayerCount(room.players.length + 1, room.bot_role, room.bot_difficulty);
+  if (totalPlayers >= room.max_players) {
     await prisma.room.update({
       where: { id: roomId },
       data: { status: "READY" },

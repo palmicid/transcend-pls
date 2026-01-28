@@ -1,6 +1,11 @@
 /**
  * @file app/play/tic-tac-toe/actions.ts
  * @description Consolidated server actions for Tic-Tac-Toe game and lobby management.
+ *
+ * Includes:
+ * - Lobby actions (list, create, delete, leave rooms)
+ * - Game actions (submit moves, start game)
+ * - Bot management actions (set/remove bot from slots)
  */
 
 "use server";
@@ -10,6 +15,14 @@ import { getSession } from "@/lib/auth/auth-session";
 import { roomManager, Room, loadAndValidateRoom } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import TicTacToeGame from "./lib/TicTacToeGame";
+import { type BotDifficulty } from "./lib/TicTacToeBot";
+import {
+  isBotConfigured,
+  getBotDifficultyLabel,
+  createBotMoveCallback,
+  validateBotConfig,
+  getBotPrismaConfig,
+} from "./lib/BotHelpers";
 
 // =============================================================================
 // TYPES
@@ -22,6 +35,7 @@ export interface RoomInfo {
   owner: { id: number; display_name: string } | null;
   playerCount: number;
   max_players: number;
+  hasBot?: boolean;
 }
 
 /** Snapshot structure returned by TicTacToeGame */
@@ -31,6 +45,19 @@ export interface TicTacToeSnapshot {
   winner: string | null;
   is_draw: boolean;
   players: Record<string, string | null>;
+  bot?: {
+    role: string | null;
+    difficulty: number | null;
+    delayMs: number;
+  } | null;
+}
+
+/** Options for configuring a bot in a slot */
+export interface SetBotOptions {
+  roomId: string;
+  role: "X" | "O";
+  difficulty: BotDifficulty;
+  delayMs?: number;
 }
 
 // =============================================================================
@@ -41,6 +68,10 @@ async function syncRoomToDb(roomId: string, room: Room) {
   const snapshot = room.getSnapshot() as TicTacToeSnapshot | null;
   if (!snapshot) return;
 
+  // Get bot config from game
+  const game = room.game as TicTacToeGame;
+  const botConfig = game.gameConfig.toPrisma();
+
   await prisma.room.update({
     where: { id: roomId },
     data: {
@@ -48,12 +79,15 @@ async function syncRoomToDb(roomId: string, room: Room) {
       board_state: snapshot.board,
       current_turn: snapshot.winner ? null : snapshot.currentTurn,
       winner_role: snapshot.winner,
+      // Sync bot config
+      ...botConfig,
     },
   });
 }
 
 /**
  * Broadcast full Prisma snapshot to all room subscribers.
+ * Includes bot as a "virtual player" in the players list.
  */
 async function broadcastRoomSnapshot(roomId: string, event: string) {
   const room = await prisma.room.findUnique({
@@ -70,6 +104,32 @@ async function broadcastRoomSnapshot(roomId: string, event: string) {
   const board = (room.board_state as (string | null)[]) || Array(9).fill(null);
   const isDraw = !room.winner_role && board.every((c) => c !== null);
 
+  // Build players list from human players
+  const players: Array<{
+    userId: number;
+    displayName: string;
+    role: string;
+    isConnected: boolean;
+    isBot: boolean;
+  }> = room.players.map((p) => ({
+    userId: p.user_id,
+    displayName: p.user.display_name,
+    role: p.role,
+    isConnected: true,
+    isBot: false,
+  }));
+
+  // Add bot as a "virtual player" if configured
+  if (isBotConfigured(room.bot_role, room.bot_difficulty)) {
+    players.push({
+      userId: -1, // Virtual ID for bot
+      displayName: `Bot (${getBotDifficultyLabel(room.bot_difficulty)})`,
+      role: room.bot_role!,
+      isConnected: true,
+      isBot: true,
+    });
+  }
+
   broadcaster.broadcast(
     roomId,
     JSON.stringify({
@@ -80,13 +140,16 @@ async function broadcastRoomSnapshot(roomId: string, event: string) {
       currentTurn: room.current_turn,
       winner: room.winner_role,
       isDraw,
-      players: room.players.map((p) => ({
-        userId: p.user_id,
-        displayName: p.user.display_name,
-        role: p.role,
-        isConnected: true,
-      })),
+      players,
       maxPlayers: room.max_players,
+      // Bot configuration for UI
+      bot: isBotConfigured(room.bot_role, room.bot_difficulty)
+        ? {
+            role: room.bot_role,
+            difficulty: room.bot_difficulty,
+            delayMs: room.bot_delay_ms,
+          }
+        : null,
     })
   );
 }
@@ -103,6 +166,8 @@ export async function listAllRooms(): Promise<RoomInfo[]> {
       game_type: true,
       status: true,
       max_players: true,
+      bot_role: true,
+      bot_difficulty: true,
       owner: {
         select: { id: true, display_name: true },
       },
@@ -120,6 +185,7 @@ export async function listAllRooms(): Promise<RoomInfo[]> {
     owner: room.owner,
     playerCount: room.players.length,
     max_players: room.max_players,
+    hasBot: isBotConfigured(room.bot_role, room.bot_difficulty),
   }));
 }
 
@@ -188,7 +254,112 @@ export async function getRoomMeta(roomId: string) {
     players: room.players,
     board_state: room.board_state,
     current_turn: room.current_turn,
+    bot_role: room.bot_role,
+    bot_difficulty: room.bot_difficulty,
+    bot_delay_ms: room.bot_delay_ms,
   };
+}
+
+// =============================================================================
+// BOT MANAGEMENT ACTIONS
+// =============================================================================
+
+/**
+ * Add a bot to an empty slot in the room.
+ * The bot becomes "another player" occupying that role.
+ *
+ * @param options - Bot configuration options
+ * @returns Success status and any error message
+ */
+export async function setBotForSlot(options: SetBotOptions) {
+  const session = await getSession();
+  if (!session) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  try {
+    // Validate bot configuration
+    validateBotConfig(options.role, options.difficulty);
+
+    // Verify room exists
+    const dbRoom = await prisma.room.findUnique({
+      where: { id: options.roomId },
+      include: { players: true },
+    });
+
+    if (!dbRoom) {
+      return { ok: false, error: "Room not found" };
+    }
+
+    // Check if the slot is occupied by a human player
+    const humanInSlot = dbRoom.players.find((p) => p.role === options.role);
+    if (humanInSlot) {
+      return { ok: false, error: "Slot is occupied by a human player" };
+    }
+
+    // Get room from memory or load from DB (this properly restores player slots)
+    const room = await loadAndValidateRoom(options.roomId);
+    if (!room) {
+      return { ok: false, error: "Failed to load room" };
+    }
+
+    // Configure the bot in the game
+    const game = room.game as TicTacToeGame;
+    game.configureBot(options.role, options.difficulty, options.delayMs ?? 500);
+
+    // Persist to database
+    await prisma.room.update({
+      where: { id: options.roomId },
+      data: getBotPrismaConfig(options.role, options.difficulty, options.delayMs ?? 500),
+    });
+
+    // Broadcast update
+    await broadcastRoomSnapshot(options.roomId, "bot_configured");
+
+    return { ok: true };
+  } catch (error) {
+    console.error("Failed to set bot:", error);
+    return { ok: false, error: "Failed to configure bot" };
+  }
+}
+
+/**
+ * Remove the bot from a room (convert back to open slot).
+ *
+ * @param roomId - The room to remove the bot from
+ * @returns Success status and any error message
+ */
+export async function removeBotFromSlot(roomId: string) {
+  const session = await getSession();
+  if (!session) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  try {
+    // Get room from memory or load from DB (this properly restores player slots)
+    const room = await loadAndValidateRoom(roomId);
+    if (!room) {
+      return { ok: false, error: "Room not found" };
+    }
+
+    // Remove bot from game
+    const game = room.game as TicTacToeGame;
+    game.configureBot(null, null);
+
+    // Clear bot config in database
+    await prisma.room.update({
+      where: { id: roomId },
+      data: getBotPrismaConfig(null, null),
+    });
+
+    // Broadcast update
+    await broadcastRoomSnapshot(roomId, "bot_removed");
+
+    return { ok: true };
+  } catch (error) {
+    console.error("Failed to remove bot:", error);
+    return { ok: false, error: "Failed to remove bot" };
+  }
 }
 
 // =============================================================================
@@ -203,7 +374,8 @@ export async function createTicTacToeRoom(roomId?: string, ownerId?: string) {
 
   try {
     // Generate roomId if not provided
-    const generatedRoomId = roomId || `room-${Math.random().toString(36).substring(2, 9)}`;
+    const generatedRoomId =
+      roomId || `room-${Math.random().toString(36).substring(2, 9)}`;
 
     const room = await prisma.room.create({
       data: {
@@ -219,7 +391,12 @@ export async function createTicTacToeRoom(roomId?: string, ownerId?: string) {
 
     const game = new TicTacToeGame();
     game.init();
-    roomManager.attachGame(room.id, game, broadcaster, session.userId.toString());
+    roomManager.attachGame(
+      room.id,
+      game,
+      broadcaster,
+      session.userId.toString()
+    );
 
     return { ok: true, roomId: room.id };
   } catch (error) {
@@ -268,6 +445,23 @@ export async function submitTicTacToeMove(
       await syncRoomToDb(roomId, room);
       // Broadcast updated state from Prisma
       await broadcastRoomSnapshot(roomId, "game_move");
+
+      // Schedule bot's response if applicable
+      const game = room.game as TicTacToeGame;
+      game.onBotMove = createBotMoveCallback(
+        roomId,
+        room,
+        game,
+        syncRoomToDb,
+        broadcastRoomSnapshot,
+        async (id, status) => {
+          await prisma.room.update({
+            where: { id },
+            data: { status },
+          });
+        }
+      );
+      game.scheduleBotMoveIfNeeded();
     }
 
     return { ok: success, snapshot: room.getSnapshot() };
@@ -285,7 +479,42 @@ export async function startTicTacToeGame(roomId: string) {
 
   try {
     const room = await loadAndValidateRoom(roomId);
-    if (!room) return { ok: false };
+    if (!room) {
+      return { ok: false };
+    }
+
+    // Load bot config from DB if not already in game
+    const dbRoom = await prisma.room.findUnique({
+      where: { id: roomId },
+    });
+
+    if (dbRoom?.bot_role && dbRoom?.bot_difficulty) {
+      const game = room.game as TicTacToeGame;
+      if (!game.gameConfig.hasBot) {
+        game.configureBot(
+          dbRoom.bot_role as "X" | "O",
+          dbRoom.bot_difficulty as BotDifficulty,
+          dbRoom.bot_delay_ms
+        );
+      }
+    }
+
+    // Set up bot move callback BEFORE starting the game to avoid race condition
+    // If bot plays first (is X), startGame() will schedule a bot move immediately
+    const game = room.game as TicTacToeGame;
+    game.onBotMove = createBotMoveCallback(
+      roomId,
+      room,
+      game,
+      syncRoomToDb,
+      broadcastRoomSnapshot,
+      async (id, status) => {
+        await prisma.room.update({
+          where: { id },
+          data: { status },
+        });
+      }
+    );
 
     const started = room.start();
 
@@ -294,8 +523,10 @@ export async function startTicTacToeGame(roomId: string) {
         where: { id: roomId },
         data: { status: "IN_GAME" },
       });
+
       // Broadcast game start from Prisma
       await broadcastRoomSnapshot(roomId, "game_start");
+      // Note: scheduleBotMoveIfNeeded is called in startGame()
     }
 
     return { ok: started };
