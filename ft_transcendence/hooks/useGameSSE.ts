@@ -128,6 +128,7 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
             players,
             maxPlayers: data.maxPlayers || 2,
             myRole: data.myRole,
+            bot: data.bot || null,
           });
         }
       } catch (err) {

@@ -254,43 +254,29 @@ export default class Room {
    */
   start(): boolean {
     if (!this._game) {
-      console.log("[Room.start] No game attached");
       return false;
     }
 
-    // Debug: log game state
-    console.log("[Room.start] Checking isReady2Start:", {
-      isReady: this._game.isReady2Start,
-      currentState: this.state.current,
-      snapshot: this._game.Snapshot,
-    });
-
     // Check if game is ready (handles bot games properly)
     if (!this._game.isReady2Start) {
-      console.log("[Room.start] Game not ready to start");
       return false;
     }
 
     // If game is ready but still in OPEN state, transition to READY first
     // This handles bot games where configureBot() was called without addPlayer()
     if (this.state.current === State.OPEN) {
-      console.log("[Room.start] Transitioning OPEN -> READY");
       if (!this.state.transitionTo(State.READY)) {
-        console.log("[Room.start] Failed to transition to READY");
         return false;
       }
     }
 
     // Now transition from READY to IN_GAME
-    console.log("[Room.start] Transitioning READY -> IN_GAME");
     if (!this.state.transitionTo(State.IN_GAME)) {
-      console.log("[Room.start] Failed to transition to IN_GAME");
       return false;
     }
 
     this._game.startGame();
     this.broadcastSnapshot();
-    console.log("[Room.start] Game started successfully");
     return true;
   }
 

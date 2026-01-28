@@ -321,9 +321,20 @@ export async function loadAndValidateRoom(roomId: string): Promise<Room | null> 
     );
   }
 
-  // Hydrate in-memory game from database state
+  // Create game instance and attach to room manager first
+  // Note: attachGame calls loadConfig() and loadState() to initialize fresh state
   const game = new TicTacToeGame();
   game.init();
+
+  room = rm.attachGame(
+    dbRoom.id,
+    game,
+    broadcaster,
+    dbRoom.owner_id.toString()
+  );
+
+  // Now restore state from DB (after attachGame has initialized defaults)
+  // This ensures DB state is actually hydrated into memory
   game.restoreState(dbRoom as TicTacToePersistedState);
 
   // Restore player slots from Prisma data
@@ -332,14 +343,6 @@ export async function loadAndValidateRoom(roomId: string): Promise<Room | null> 
       game.playerslot.roles[player.role as PlayerRole] = player.user_id.toString();
     }
   }
-
-  // Attach game to room manager
-  room = rm.attachGame(
-    dbRoom.id,
-    game,
-    broadcaster,
-    dbRoom.owner_id.toString()
-  );
 
   return room;
 }

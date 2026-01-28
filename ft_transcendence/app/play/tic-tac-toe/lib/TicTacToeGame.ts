@@ -196,9 +196,17 @@ export default class TicTacToeGame extends Game<
 
     // Schedule the move with delay for human-like feel
     this.botMoveTimeout = setTimeout(async () => {
-      this.executeBotMove();
-      if (this.onBotMove) {
-        await this.onBotMove();
+      try {
+        this.executeBotMove();
+        if (this.onBotMove) {
+          await this.onBotMove();
+        }
+      } catch (error) {
+        logger.error({
+          msg: "Bot move callback failed",
+          error: error instanceof Error ? error.message : String(error),
+          botRole: this.gameConfig.botRole,
+        });
       }
     }, this.gameConfig.botDelayMs);
 
