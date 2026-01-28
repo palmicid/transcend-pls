@@ -373,12 +373,13 @@ export default class TicTacToeGame extends Game<
    */
   get isReady2Start(): boolean {
     logger.debug({
+      msg: "[TicTacToeGame.isReady2Start] Checking",
       hasBot: this.gameConfig.hasBot,
       botRole: this.gameConfig.botRole,
       botDifficulty: this.gameConfig.botDifficulty,
       playerSlotRoles: this.playerslot.roles,
       isFull: this.playerslot.isFull,
-    }, "[TicTacToeGame.isReady2Start] Checking");
+    });
 
     if (this.gameConfig.hasBot) {
       // With bot, need 1 human player (bot is already in slot)
@@ -386,10 +387,11 @@ export default class TicTacToeGame extends Game<
       const humanPlayerId = this.playerslot.roles[humanRole];
       const isReady = humanPlayerId !== null && humanPlayerId !== BOT_PLAYER_ID;
       logger.debug({
+        msg: "[TicTacToeGame.isReady2Start] Bot game check",
         humanRole,
         humanPlayerId,
         isReady,
-      }, "[TicTacToeGame.isReady2Start] Bot game check");
+      });
       return isReady;
     }
     return this.playerslot.isFull;
