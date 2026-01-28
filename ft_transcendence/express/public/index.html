@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSE Room Tester</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        min-height: 100vh;
+        padding: 2rem;
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        color: #a6e3a1;
+        margin-bottom: 1.5rem;
+        font-size: 1.75rem;
+      }
+
+      h2 {
+        color: #89b4fa;
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #45475a;
+        padding-bottom: 0.5rem;
+      }
+
+      h3 {
+        color: #cba6f7;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: #313244;
+        border: 1px solid #45475a;
+        border-radius: 8px;
+        padding: 1rem;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      label {
+        display: block;
+        font-size: 0.85rem;
+        color: #7f849c;
+        margin-bottom: 0.25rem;
+      }
+
+      input, select {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        background: #1e1e2e;
+        border: 1px solid #45475a;
+        border-radius: 4px;
+        color: #cdd6f4;
+        font-size: 0.9rem;
+      }
+
+      input:focus, select:focus {
+        outline: none;
+        border-color: #89b4fa;
+      }
+
+      button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .btn-primary {
+        background: #a6e3a1;
+        color: #1e1e2e;
+      }
+      .btn-primary:hover {
+        background: #94e2d5;
+      }
+
+      .btn-secondary {
+        background: #6c7086;
+        color: #cdd6f4;
+      }
+      .btn-secondary:hover {
+        background: #7f849c;
+      }
+
+      .btn-danger {
+        background: #f38ba8;
+        color: #1e1e2e;
+      }
+      .btn-danger:hover {
+        background: #eba0ac;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      }
+
+      .status.connected {
+        background: rgba(166, 227, 161, 0.2);
+        color: #a6e3a1;
+      }
+
+      .status.disconnected {
+        background: rgba(243, 139, 168, 0.2);
+        color: #f38ba8;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .status.connected .status-dot {
+        background: #a6e3a1;
+      }
+      .status.disconnected .status-dot {
+        background: #f38ba8;
+      }
+
+      .log {
+        background: #1e1e2e;
+        border: 1px solid #45475a;
+        border-radius: 4px;
+        height: 200px;
+        overflow-y: auto;
+        padding: 0.75rem;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 0.75rem;
+      }
+
+      .log-entry {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #45475a;
+      }
+
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+
+      .log-time {
+        color: #7f849c;
+        font-size: 0.7rem;
+      }
+
+      .log-type {
+        font-weight: 600;
+        margin: 0 0.5rem;
+      }
+
+      .log-type.send { color: #89b4fa; }
+      .log-type.receive { color: #a6e3a1; }
+      .log-type.error { color: #f38ba8; }
+      .log-type.info { color: #f9e2af; }
+
+      .room-list {
+        list-style: none;
+        max-height: 120px;
+        overflow-y: auto;
+      }
+
+      .room-item {
+        padding: 0.4rem;
+        background: #1e1e2e;
+        border-radius: 4px;
+        margin-bottom: 0.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+      }
+
+      .room-item span {
+        color: #89dceb;
+        font-family: monospace;
+      }
+
+      .api-config {
+        background: #11111b;
+        padding: 0.75rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      }
+
+      .api-status {
+        font-size: 0.75rem;
+        color: #7f849c;
+        margin-top: 0.25rem;
+      }
+
+      .api-status.online { color: #a6e3a1; }
+      .api-status.offline { color: #f38ba8; }
+
+      /* Tic-Tac-Toe Board Styles */
+      .ttt-container {
+        text-align: center;
+      }
+
+      .ttt-board {
+        display: grid;
+        grid-template-columns: repeat(3, 80px);
+        grid-template-rows: repeat(3, 80px);
+        gap: 8px;
+        margin: 1rem auto;
+        justify-content: center;
+      }
+
+      .ttt-cell {
+        background: #1e1e2e;
+        border: 2px solid #45475a;
+        border-radius: 8px;
+        font-size: 2.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .ttt-cell:hover:not(.disabled) {
+        background: #45475a;
+        border-color: #89b4fa;
+      }
+
+      .ttt-cell.disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .ttt-cell.x {
+        color: #89b4fa;
+      }
+
+      .ttt-cell.o {
+        color: #f38ba8;
+      }
+
+      .ttt-info {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      .ttt-state {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+      }
+
+      .ttt-state.your-turn {
+        background: rgba(166, 227, 161, 0.2);
+        color: #a6e3a1;
+      }
+
+      .ttt-state.opponent-turn {
+        background: rgba(249, 226, 175, 0.2);
+        color: #f9e2af;
+      }
+
+      .ttt-state.won {
+        background: rgba(166, 227, 161, 0.3);
+        color: #a6e3a1;
+      }
+
+      .ttt-state.lost {
+        background: rgba(243, 139, 168, 0.3);
+        color: #f38ba8;
+      }
+
+      .ttt-state.draw {
+        background: rgba(108, 112, 134, 0.3);
+        color: #7f849c;
+      }
+
+      .ttt-state.waiting {
+        background: rgba(137, 180, 250, 0.2);
+        color: #89b4fa;
+      }
+
+      .ttt-players {
+        font-size: 0.85rem;
+        color: #7f849c;
+      }
+
+      .ttt-timer {
+        font-size: 0.9rem;
+        color: #f9e2af;
+        margin-top: 0.5rem;
+      }
+
+      .ttt-timer.warning {
+        color: #f38ba8;
+        font-weight: bold;
+      }
+
+      .player-symbol {
+        font-weight: bold;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        margin-left: 0.5rem;
+      }
+
+      .player-symbol.x {
+        background: rgba(137, 180, 250, 0.2);
+        color: #89b4fa;
+      }
+
+      .player-symbol.o {
+        background: rgba(243, 139, 168, 0.2);
+        color: #f38ba8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎮 SSE Room Tester + Tic-Tac-Toe</h1>
+
+      <!-- API Configuration -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <h2>API Configuration</h2>
+        <div class="api-config">
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label>API Base URL</label>
+            <input type="text" id="apiBaseUrl" value="" placeholder="http://localhost:3001" onchange="updateApiUrl()" />
+          </div>
+          <div class="api-status" id="apiStatus">Not connected</div>
+          <div class="btn-group" style="margin-top: 0.5rem;">
+            <button class="btn-secondary" onclick="autoDetectApi()">Auto-Detect</button>
+            <button class="btn-primary" onclick="testApiConnection()">Test Connection</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- Column 1: Room Management -->
+        <div class="card">
+          <h2>Room Management</h2>
+
+          <div class="form-group">
+            <label>Your User ID</label>
+            <input type="text" id="userId" value="user-1" placeholder="Enter your user ID" />
+          </div>
+
+          <div class="form-group">
+            <label>Room ID</label>
+            <input type="text" id="roomId" value="game-1" placeholder="Enter room ID" />
+          </div>
+
+          <div class="form-group">
+            <label>Room Type</label>
+            <select id="roomType">
+              <option value="tictactoe">Tic-Tac-Toe</option>
+              <option value="sse">SSE (Chat)</option>
+            </select>
+          </div>
+
+          <div class="btn-group">
+            <button class="btn-primary" onclick="createRoom()">Create</button>
+            <button class="btn-secondary" onclick="listRooms()">List</button>
+          </div>
+
+          <div style="margin-top: 1rem">
+            <label>Available Rooms</label>
+            <ul class="room-list" id="roomList">
+              <li class="room-item"><em style="color: #7f849c">Click "List" to refresh</em></li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 1rem">
+            <h3>Connection</h3>
+            <div id="connectionStatus" class="status disconnected">
+              <span class="status-dot"></span>
+              <span>Disconnected</span>
+            </div>
+            <div id="playerSymbol"></div>
+            <div class="btn-group">
+              <button class="btn-primary" onclick="connect()">Connect</button>
+              <button class="btn-danger" onclick="disconnect()">Disconnect</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Tic-Tac-Toe Game -->
+        <div class="card">
+          <h2>🎯 Tic-Tac-Toe</h2>
+
+          <div class="ttt-info">
+            <div class="ttt-state waiting" id="gameState">Waiting for connection...</div>
+            <div class="ttt-players" id="gamePlayers"></div>
+            <div class="ttt-timer" id="turnTimer"></div>
+          </div>
+
+          <div class="ttt-container">
+            <div class="ttt-board" id="tttBoard">
+              <div class="ttt-cell disabled" data-pos="0" onclick="makeMove(0)"></div>
+              <div class="ttt-cell disabled" data-pos="1" onclick="makeMove(1)"></div>
+              <div class="ttt-cell disabled" data-pos="2" onclick="makeMove(2)"></div>
+              <div class="ttt-cell disabled" data-pos="3" onclick="makeMove(3)"></div>
+              <div class="ttt-cell disabled" data-pos="4" onclick="makeMove(4)"></div>
+              <div class="ttt-cell disabled" data-pos="5" onclick="makeMove(5)"></div>
+              <div class="ttt-cell disabled" data-pos="6" onclick="makeMove(6)"></div>
+              <div class="ttt-cell disabled" data-pos="7" onclick="makeMove(7)"></div>
+              <div class="ttt-cell disabled" data-pos="8" onclick="makeMove(8)"></div>
+            </div>
+          </div>
+
+          <div class="btn-group" style="justify-content: center; margin-top: 1rem;">
+            <button class="btn-secondary" onclick="getRoomInfo()">Refresh State</button>
+            <button class="btn-primary" onclick="resetRoom()">New Game</button>
+          </div>
+        </div>
+
+        <!-- Column 3: Chat & Log -->
+        <div class="card">
+          <h2>💬 Chat / Actions</h2>
+
+          <div class="form-group">
+            <label>Message to Broadcast</label>
+            <input type="text" id="message" placeholder="Type a message..." onkeydown="if(event.key==='Enter') broadcast()" />
+          </div>
+          <button class="btn-primary" onclick="broadcast()" style="margin-bottom: 1rem;">Send</button>
+
+          <div class="btn-group" style="margin-bottom: 1rem;">
+            <button class="btn-secondary" onclick="checkHealth()">Health</button>
+            <button class="btn-danger" onclick="deleteRoom()">Delete Room</button>
+          </div>
+
+          <h3>Event Log</h3>
+          <div class="log" id="log"></div>
+          <button class="btn-secondary" onclick="clearLog()" style="margin-top: 0.5rem; font-size: 0.8rem;">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // =============================================================================
+      // State
+      // =============================================================================
+
+      let API_BASE_URL = '';
+      let eventSource = null;
+      let mySymbol = null;
+      let gameState = null;
+      let timerInterval = null;
+
+      // =============================================================================
+      // API Configuration
+      // =============================================================================
+
+      function initApiUrl() {
+        const saved = localStorage.getItem('apiBaseUrl');
+        if (saved) {
+          API_BASE_URL = saved;
+          document.getElementById('apiBaseUrl').value = saved;
+        } else {
+          autoDetectApi();
+        }
+      }
+
+      function updateApiUrl() {
+        const url = document.getElementById('apiBaseUrl').value.trim();
+        API_BASE_URL = url;
+        localStorage.setItem('apiBaseUrl', url);
+        log('info', `API URL set to: ${url || '(same origin)'}`);
+      }
+
+      function autoDetectApi() {
+        if (window.location.port === '3001' || window.location.hostname !== 'localhost') {
+          API_BASE_URL = '';
+          document.getElementById('apiBaseUrl').value = '';
+        } else {
+          API_BASE_URL = 'http://localhost:3001';
+          document.getElementById('apiBaseUrl').value = API_BASE_URL;
+        }
+        localStorage.setItem('apiBaseUrl', API_BASE_URL);
+        log('info', `Auto-detected API URL: ${API_BASE_URL || '(same origin)'}`);
+        testApiConnection();
+      }
+
+      async function testApiConnection() {
+        const statusEl = document.getElementById('apiStatus');
+        statusEl.textContent = 'Testing...';
+        statusEl.className = 'api-status';
+
+        try {
+          const res = await apiFetch('/health');
+          const data = await res.json();
+          statusEl.textContent = `✓ Connected - ${data.environment}`;
+          statusEl.className = 'api-status online';
+        } catch (err) {
+          statusEl.textContent = `✗ ${err.message}`;
+          statusEl.className = 'api-status offline';
+        }
+      }
+
+      function apiFetch(path, options = {}) {
+        const url = API_BASE_URL + path;
+        return fetch(url, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        });
+      }
+
+      // =============================================================================
+      // Logging
+      // =============================================================================
+
+      function log(type, message) {
+        const logEl = document.getElementById("log");
+        const time = new Date().toLocaleTimeString();
+        const entry = document.createElement("div");
+        entry.className = "log-entry";
+        const msgStr = typeof message === "object" ? JSON.stringify(message) : message;
+        entry.innerHTML = `<span class="log-time">${time}</span><span class="log-type ${type}">[${type.toUpperCase()}]</span><span>${msgStr}</span>`;
+        logEl.insertBefore(entry, logEl.firstChild);
+      }
+
+      function clearLog() {
+        document.getElementById("log").innerHTML = "";
+      }
+
+      function setConnectionStatus(connected) {
+        const el = document.getElementById("connectionStatus");
+        el.className = connected ? "status connected" : "status disconnected";
+        el.innerHTML = `<span class="status-dot"></span><span>${connected ? 'Connected' : 'Disconnected'}</span>`;
+      }
+
+      // =============================================================================
+      // Room Management
+      // =============================================================================
+
+      async function checkHealth() {
+        try {
+          const res = await apiFetch("/health");
+          const data = await res.json();
+          log("info", `Health: ${JSON.stringify(data)}`);
+        } catch (err) {
+          log("error", `Health check failed: ${err.message}`);
+        }
+      }
+
+      async function listRooms() {
+        try {
+          const res = await apiFetch("/rooms");
+          const rooms = await res.json();
+          log("info", `Rooms: ${JSON.stringify(rooms)}`);
+
+          const listEl = document.getElementById("roomList");
+          if (rooms.length === 0) {
+            listEl.innerHTML = '<li class="room-item"><em style="color: #7f849c;">No rooms</em></li>';
+          } else {
+            listEl.innerHTML = rooms.map(r => `
+              <li class="room-item">
+                <span>${r}</span>
+                <button class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="document.getElementById('roomId').value='${r}';connect()">Join</button>
+              </li>
+            `).join("");
+          }
+        } catch (err) {
+          log("error", `Failed to list rooms: ${err.message}`);
+        }
+      }
+
+      async function createRoom() {
+        const roomId = document.getElementById("roomId").value.trim();
+        const roomType = document.getElementById("roomType").value;
+
+        if (!roomId) {
+          log("error", "Room ID required");
+          return;
+        }
+
+        try {
+          const res = await apiFetch("/rooms", {
+            method: "POST",
+            body: JSON.stringify({ id: roomId, type: roomType }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            log("info", `Room created: ${roomId} (${data.type})`);
+            listRooms();
+          } else {
+            log("error", data.error);
+          }
+        } catch (err) {
+          log("error", `Failed: ${err.message}`);
+        }
+      }
+
+      async function getRoomInfo() {
+        const roomId = document.getElementById("roomId").value.trim();
+        if (!roomId) return;
+
+        try {
+          const res = await apiFetch(`/rooms/${roomId}`);
+          const data = await res.json();
+          if (res.ok) {
+            log("info", `Room: ${JSON.stringify(data)}`);
+            if (data.state) {
+              updateGameUI(data.state);
+            }
+          } else {
+            log("error", data.error);
+          }
+        } catch (err) {
+          log("error", `Failed: ${err.message}`);
+        }
+      }
+
+      async function resetRoom() {
+        const roomId = document.getElementById("roomId").value.trim();
+        if (!roomId) return;
+
+        try {
+          const res = await apiFetch(`/rooms/${roomId}/reset`, { method: "POST" });
+          const data = await res.json();
+          if (res.ok) {
+            log("info", `Game reset!`);
+          } else {
+            log("error", data.error);
+          }
+        } catch (err) {
+          log("error", `Failed: ${err.message}`);
+        }
+      }
+
+      async function deleteRoom() {
+        const roomId = document.getElementById("roomId").value.trim();
+        if (!roomId) return;
+
+        try {
+          const res = await apiFetch(`/rooms/${roomId}`, { method: "DELETE" });
+          const data = await res.json();
+          if (res.ok) {
+            log("info", `Room deleted`);
+            disconnect();
+            listRooms();
+          } else {
+            log("error", data.error);
+          }
+        } catch (err) {
+          log("error", `Failed: ${err.message}`);
+        }
+      }
+
+      // =============================================================================
+      // SSE Connection
+      // =============================================================================
+
+      function connect() {
+        if (eventSource) eventSource.close();
+        resetGameUI();
+
+        const roomId = document.getElementById("roomId").value.trim();
+        const userId = document.getElementById("userId").value.trim();
+
+        if (!roomId || !userId) {
+          log("error", "Room ID and User ID required");
+          return;
+        }
+
+        const sseUrl = `${API_BASE_URL}/rooms/${roomId}/subscribe?userId=${encodeURIComponent(userId)}`;
+        log("info", `Connecting...`);
+
+        eventSource = new EventSource(sseUrl);
+
+        eventSource.onopen = () => {
+          log("info", "Connected");
+          setConnectionStatus(true);
+        };
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleSSEMessage(data);
+          } catch {
+            log("receive", event.data);
+          }
+        };
+
+        eventSource.onerror = () => {
+          log("error", "Connection error");
+          setConnectionStatus(false);
+        };
+      }
+
+      function disconnect() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+          log("info", "Disconnected");
+          setConnectionStatus(false);
+        }
+        resetGameUI();
+      }
+
+      function handleSSEMessage(data) {
+        const type = data.type || data.event;
+        log("receive", data);
+
+        if (data.payload) {
+          updateGameUI(data.payload);
+        }
+
+        // Determine my symbol from the players
+        if (data.payload?.players) {
+          const userId = document.getElementById("userId").value.trim();
+          if (data.payload.players.X === userId) {
+            mySymbol = 'X';
+          } else if (data.payload.players.O === userId) {
+            mySymbol = 'O';
+          }
+          updatePlayerSymbolDisplay();
+        }
+      }
+
+      async function broadcast() {
+        const roomId = document.getElementById("roomId").value.trim();
+        const userId = document.getElementById("userId").value.trim();
+        const message = document.getElementById("message").value.trim();
+
+        if (!roomId || !userId || !message) return;
+
+        try {
+          const res = await apiFetch(`/rooms/${roomId}/broadcast`, {
+            method: "POST",
+            body: JSON.stringify({ userId, message }),
+          });
+          if (res.ok) {
+            log("send", { message });
+            document.getElementById("message").value = "";
+          } else {
+            const data = await res.json();
+            log("error", data.error);
+          }
+        } catch (err) {
+          log("error", `Broadcast failed: ${err.message}`);
+        }
+      }
+
+      // =============================================================================
+      // Tic-Tac-Toe Game
+      // =============================================================================
+
+      function resetGameUI() {
+        mySymbol = null;
+        gameState = null;
+        document.getElementById('playerSymbol').innerHTML = '';
+        document.getElementById('gameState').textContent = 'Waiting for connection...';
+        document.getElementById('gameState').className = 'ttt-state waiting';
+        document.getElementById('gamePlayers').textContent = '';
+        document.getElementById('turnTimer').textContent = '';
+        clearTimer();
+
+        document.querySelectorAll('.ttt-cell').forEach(cell => {
+          cell.textContent = '';
+          cell.className = 'ttt-cell disabled';
+        });
+      }
+
+      function updatePlayerSymbolDisplay() {
+        const el = document.getElementById('playerSymbol');
+        if (mySymbol) {
+          el.innerHTML = `You are: <span class="player-symbol ${mySymbol.toLowerCase()}">${mySymbol}</span>`;
+        } else {
+          el.innerHTML = '';
+        }
+      }
+
+      function updateGameUI(state) {
+        gameState = state;
+        const userId = document.getElementById("userId").value.trim();
+
+        // Update board
+        if (state.board) {
+          state.board.forEach((cell, i) => {
+            const cellEl = document.querySelector(`.ttt-cell[data-pos="${i}"]`);
+            if (cell) {
+              cellEl.textContent = cell;
+              cellEl.className = `ttt-cell ${cell.toLowerCase()} disabled`;
+            } else {
+              cellEl.textContent = '';
+              cellEl.className = 'ttt-cell';
+            }
+          });
+        }
+
+        // Update game state display
+        const stateEl = document.getElementById('gameState');
+        const isMyTurn = (state.state === 'X_PLAY' && mySymbol === 'X') ||
+                         (state.state === 'O_PLAY' && mySymbol === 'O');
+
+        if (state.state === 'OPEN') {
+          stateEl.textContent = 'Waiting for opponent...';
+          stateEl.className = 'ttt-state waiting';
+          disableAllCells();
+        } else if (state.state === 'X_PLAY' || state.state === 'O_PLAY') {
+          const turn = state.state === 'X_PLAY' ? 'X' : 'O';
+          if (isMyTurn) {
+            stateEl.textContent = `Your turn! (${mySymbol})`;
+            stateEl.className = 'ttt-state your-turn';
+            enableEmptyCells();
+          } else {
+            stateEl.textContent = `${turn}'s turn...`;
+            stateEl.className = 'ttt-state opponent-turn';
+            disableAllCells();
+          }
+        } else if (state.state === 'X_WIN' || state.state === 'O_WIN') {
+          const winner = state.state === 'X_WIN' ? 'X' : 'O';
+          if (winner === mySymbol) {
+            stateEl.textContent = '🎉 You WIN!';
+            stateEl.className = 'ttt-state won';
+          } else {
+            stateEl.textContent = `${winner} wins!`;
+            stateEl.className = 'ttt-state lost';
+          }
+          disableAllCells();
+          clearTimer();
+        } else if (state.state === 'DRAW') {
+          stateEl.textContent = "It's a draw!";
+          stateEl.className = 'ttt-state draw';
+          disableAllCells();
+          clearTimer();
+        }
+
+        // Update players display
+        const playersEl = document.getElementById('gamePlayers');
+        if (state.players) {
+          playersEl.innerHTML = `
+            <span style="color: #89b4fa;">X: ${state.players.X || 'waiting...'}</span> |
+            <span style="color: #f38ba8;">O: ${state.players.O || 'waiting...'}</span>
+          `;
+        }
+
+        // Update timer
+        if (state.turnTimeRemaining !== null && state.turnTimeRemaining !== undefined) {
+          updateTimer(state.turnTimeRemaining, state.turnStartedAt);
+        } else {
+          clearTimer();
+        }
+      }
+
+      function enableEmptyCells() {
+        document.querySelectorAll('.ttt-cell').forEach(cell => {
+          if (!cell.textContent) {
+            cell.classList.remove('disabled');
+          }
+        });
+      }
+
+      function disableAllCells() {
+        document.querySelectorAll('.ttt-cell').forEach(cell => {
+          cell.classList.add('disabled');
+        });
+      }
+
+      function updateTimer(remaining, startedAt) {
+        clearTimer();
+
+        const timerEl = document.getElementById('turnTimer');
+
+        function tick() {
+          const now = Date.now();
+          const elapsed = now - startedAt;
+          const left = Math.max(0, 60000 - elapsed);
+          const seconds = Math.ceil(left / 1000);
+
+          timerEl.textContent = `⏱️ ${seconds}s remaining`;
+          timerEl.className = seconds <= 10 ? 'ttt-timer warning' : 'ttt-timer';
+
+          if (seconds <= 0) {
+            clearTimer();
+          }
+        }
+
+        tick();
+        timerInterval = setInterval(tick, 1000);
+      }
+
+      function clearTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        document.getElementById('turnTimer').textContent = '';
+      }
+
+      async function makeMove(position) {
+        const cell = document.querySelector(`.ttt-cell[data-pos="${position}"]`);
+        if (cell.classList.contains('disabled') || cell.textContent) return;
+
+        const roomId = document.getElementById("roomId").value.trim();
+        const userId = document.getElementById("userId").value.trim();
+
+        if (!roomId || !userId) return;
+
+        // Optimistic UI update
+        cell.textContent = mySymbol;
+        cell.className = `ttt-cell ${mySymbol.toLowerCase()} disabled`;
+        disableAllCells();
+
+        try {
+          const res = await apiFetch(`/rooms/${roomId}/action`, {
+            method: "POST",
+            body: JSON.stringify({
+              userId,
+              action: { type: 'MOVE', position }
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            log("error", data.error);
+            // Revert on error
+            getRoomInfo();
+          }
+        } catch (err) {
+          log("error", `Move failed: ${err.message}`);
+          getRoomInfo();
+        }
+      }
+
+      // =============================================================================
+      // Initialize
+      // =============================================================================
+
+      initApiUrl();
+      testApiConnection();
+      listRooms();
+    </script>
+  </body>
+</html>

@@ -5,94 +5,126 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider      = "prisma-client-js"
-  output        = "../node_modules/.prisma/client"
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-
 model User {
-  id               Int              @id @default(autoincrement())
-  email            String           @unique
-  password         String
-  display_name     String           @default("player") //how to add ID here?
-  avatar_url       String           @default("") //default pic here
-  online_status    Boolean          @default(false)
-  created_at       DateTime         @default(now())
-  updated_at       DateTime         @updatedAt
-  secret           String           @default("")
-  is_verified      Boolean          @default(false)
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String
+  display_name  String   @default("player") //how to add ID here?
+  avatar_url    String   @default("") //default pic here
+  online_status Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  secret        String   @default("")
+  is_verified   Boolean  @default(false)
 
   // Google Auth Relation
-  googleAuth      oauth[]
+  googleAuth oauth[]
 
   // Relations
-  sentRequests     FriendRelation[]  @relation("SentRequests")
-  receivedRequests FriendRelation[]  @relation("ReceivedRequests")
+  sentRequests     FriendRelation[] @relation("SentRequests")
+  receivedRequests FriendRelation[] @relation("ReceivedRequests")
 
   // Relations for Tic Tac Toe
-  ttt_player1      Game_ttt[]       @relation("Player1")
-  ttt_player2      Game_ttt[]       @relation("Player2")
-  ttt_winner       Game_ttt[]       @relation("Winner")
+  ttt_player1 Game_ttt[] @relation("Player1")
+  ttt_player2 Game_ttt[] @relation("Player2")
+  ttt_winner  Game_ttt[] @relation("Winner")
 
   // Relations for Rock Paper Scissors
-  rps_player1      Game_rps[]       @relation("Player1")
-  rps_player2      Game_rps[]       @relation("Player2")
-  rps_winner       Game_rps[]       @relation("Winner")
+  rps_player1 Game_rps[] @relation("Player1")
+  rps_player2 Game_rps[] @relation("Player2")
+  rps_winner  Game_rps[] @relation("Winner")
+
+  // Room relations
+  ownedRooms  Room[]       @relation("RoomOwner")
+  roomPlayers RoomPlayer[] @relation("RoomPlayers")
 }
 
 // Friendships Model
 model FriendRelation {
-  id               Int              @id @default(autoincrement())
-  
-  user_id          Int
-  sender           User            @relation("SentRequests", fields: [user_id], references: [id])
-  
-  friend_id        Int
-  friend           User            @relation("ReceivedRequests", fields: [friend_id], references: [id])
+  id Int @id @default(autoincrement())
 
-  is_accepted      Boolean          @default(false)
-  created_at       DateTime         @default(now())
+  user_id Int
+  sender  User @relation("SentRequests", fields: [user_id], references: [id])
 
+  friend_id Int
+  friend    User @relation("ReceivedRequests", fields: [friend_id], references: [id])
 
+  is_accepted Boolean  @default(false)
+  created_at  DateTime @default(now())
 
   @@unique([user_id, friend_id])
 }
 
 // Tic Tac Toe Game Model
 model Game_ttt {
-  id               Int              @id @default(autoincrement())
-  player1_id       Int
-  player1          User            @relation("Player1", fields: [player1_id], references: [id])
-  player2_id       Int
-  player2          User            @relation("Player2", fields: [player2_id], references: [id])
-  winner_id        Int?
-  winner           User?           @relation("Winner", fields: [winner_id], references: [id])
-  created_at       DateTime         @default(now())
+  id         Int      @id @default(autoincrement())
+  player1_id Int
+  player1    User     @relation("Player1", fields: [player1_id], references: [id])
+  player2_id Int
+  player2    User     @relation("Player2", fields: [player2_id], references: [id])
+  winner_id  Int?
+  winner     User?    @relation("Winner", fields: [winner_id], references: [id])
+  created_at DateTime @default(now())
 }
 
 // Rock Paper Scissors Game Model
 model Game_rps {
-  id               Int              @id @default(autoincrement())
-  player1_id       Int
-  player1          User            @relation("Player1", fields: [player1_id], references: [id])
-  player2_id       Int
-  player2          User            @relation("Player2", fields: [player2_id], references: [id])
-  winner_id        Int?
-  winner           User?           @relation("Winner", fields: [winner_id], references: [id])
-  created_at       DateTime         @default(now())
+  id         Int      @id @default(autoincrement())
+  player1_id Int
+  player1    User     @relation("Player1", fields: [player1_id], references: [id])
+  player2_id Int
+  player2    User     @relation("Player2", fields: [player2_id], references: [id])
+  winner_id  Int?
+  winner     User?    @relation("Winner", fields: [winner_id], references: [id])
+  created_at DateTime @default(now())
 }
 
 // Google Authentication Model
 model oauth {
-  oauth_id       String           @id
-  refresh_token   String
-  access_token    String
-  granted_scopes  String
-  expiry_date     DateTime
-  user_id         Int            
-  user            User           @relation(fields: [user_id], references: [id])
+  oauth_id       String   @id
+  refresh_token  String
+  access_token   String
+  granted_scopes String
+  expiry_date    DateTime
+  user_id        Int
+  user           User     @relation(fields: [user_id], references: [id])
+}
+
+// Room Model for game lobbies
+model Room {
+  id           String   @id
+  owner_id     Int
+  owner        User     @relation("RoomOwner", fields: [owner_id], references: [id])
+  game_type    String   @default("tic-tac-toe")
+  status       String   @default("OPEN") // OPEN, READY, IN_GAME, ENDED
+  max_players  Int      @default(2)
+  board_state  Json?    @default("[]")
+  current_turn String?
+  winner_role  String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  players RoomPlayer[]
+}
+
+// Room Player Model
+model RoomPlayer {
+  room_id   String
+  room      Room     @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user_id   Int
+  user      User     @relation("RoomPlayers", fields: [user_id], references: [id], onDelete: Cascade)
+  role      String // "X" or "O" for tic-tac-toe
+  joined_at DateTime @default(now())
+
+  @@id([room_id, user_id])
+  @@unique([room_id, user_id])
 }

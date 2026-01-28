@@ -13,7 +13,7 @@ import {
   joinTicTacToeRoom,
   submitTicTacToeMove,
   startTicTacToeGame,
-} from "@/app/game/tic-tac-toe/actions";
+} from "@/app/play/tic-tac-toe/actions";
 
 describe("Tic-Tac-Toe Server Actions", () => {
   const testRoomId = "test-room-actions";

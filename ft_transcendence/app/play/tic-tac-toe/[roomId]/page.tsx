@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth/auth-session";
 import { getSession } from "@/lib/auth/auth-session";
 import { getRoomMeta } from "../actions";
+import { MainLayout } from "@/components/layout/MainLayout";
 import RoomView, { GameType } from "./RoomView";
 
 type PageProps = {
@@ -10,25 +13,39 @@ type PageProps = {
 export default async function RoomPage({ params, searchParams }: PageProps) {
   const { roomId } = await params;
   const resolvedSearch = searchParams ? await searchParams : undefined;
+
+  let userId: number;
+  try {
+    userId = await requireAuth();
+  } catch {
+    redirect("/login");
+  }
+
   const session = await getSession();
   if (!session) {
-    throw new Error("Unauthorized");
+    redirect("/login");
   }
 
   const meta = await getRoomMeta(roomId);
+  if (!meta) {
+    throw new Error("Room not found");
+  }
+
   const requestedGame = resolvedSearch?.game === "tic-tac-toe" ? "tic-tac-toe" : undefined;
   const resolvedGame: GameType = requestedGame
     ? requestedGame
-    : meta.gameType === "tic-tac-toe"
+    : meta.game_type === "tic-tac-toe"
       ? "tic-tac-toe"
-      : "tic-tac-toe"; // Default to Tic-Tac-Toe since generic is removed
+      : "tic-tac-toe";
 
   return (
-    <RoomView
-      roomId={roomId}
-      userId={session.userId as string}
-      gameType={resolvedGame}
-      initialState={meta.state}
-    />
+    <MainLayout showNav={true}>
+      <RoomView
+        roomId={roomId}
+        userId={session.userId.toString()}
+        gameType={resolvedGame}
+        initialState={meta.status}
+      />
+    </MainLayout>
   );
 }

@@ -10,7 +10,7 @@
  *
  * @example
  * ```ts
- * import TicTacToeGame from '@/app/game/tic-tac-toe/TicTacToeGame';
+ * import TicTacToeGame from '@/app/play/tic-tac-toe/lib/TicTacToeGame';
  *
  * const game = new TicTacToeGame();
  * game.init();
@@ -26,6 +26,16 @@ import TicTacToeConfig from "./TicTacToeConfig";
 import TicTacToeState from "./TicTacToeState";
 import TicTacToePlayerSlot, { PlayerRole } from "./TicTacToePlayerSlot";
 import logger from "@/lib/logger";
+
+/**
+ * Shape of persisted Tic-Tac-Toe state from the database.
+ */
+interface TicTacToePersistedState {
+  board_state?: (PlayerRole | null)[];
+  current_turn?: PlayerRole;
+  status?: string;
+  winner_role?: PlayerRole;
+}
 
 /**
  * Winning line combinations on a 3x3 board.
@@ -146,6 +156,26 @@ export default class TicTacToeGame extends Game<
   }
 
   /**
+   * Restore game state from persistent storage.
+   *
+   * @param data - The raw state data from the database
+   */
+  restoreState(data: any): void {
+    if (!data) return;
+
+    if (data.board_state) {
+      this.gameState.board = data.board_state;
+    }
+    if (data.current_turn) {
+      this.gameState.currentTurn = data.current_turn;
+    }
+    // Infer winner if game is ended
+    if (data.status === "ENDED" && data.winner_role) {
+      this.gameState.winner = data.winner_role;
+    }
+  }
+
+  /**
    * Update state after a move - check for winner.
    */
   updateState(): void {
@@ -159,10 +189,12 @@ export default class TicTacToeGame extends Game<
    * Get the current game snapshot for client display.
    */
   get Snapshot(): unknown {
+    const isDraw = !this.gameState.winner && this.gameState.board.every((c) => c !== null);
     return {
       board: this.gameState.board,
       currentTurn: this.gameState.currentTurn,
       winner: this.gameState.winner,
+      is_draw: isDraw,
       players: this.playerslot.roles,
     };
   }
