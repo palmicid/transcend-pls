@@ -12,10 +12,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSSEHandler } from "@/lib/sse/createSSEHandler";
 import { getSession } from "@/lib/auth/auth-session";
-import { roomManager } from "@/lib/rooms";
+import { loadAndValidateRoomSafe } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import prisma from "@/lib/prisma";
-import TicTacToeGame from "../../lib/TicTacToeGame";
 
 // =============================================================================
 // TYPES
@@ -95,39 +94,10 @@ async function broadcastRoomSnapshot(roomId: string, event: string) {
 
 /**
  * Ensure room is loaded in memory, hydrating from DB if necessary.
- * Restores player slots from Prisma data.
+ * Includes validation of loaded state for consistency.
  */
 async function getOrLoadRoom(roomId: string) {
-  let room = roomManager.getRoom(roomId);
-  if (room) return room;
-
-  // Load room WITH players from Prisma
-  const dbRoom = await prisma.room.findUnique({
-    where: { id: roomId },
-    include: { players: true },
-  });
-
-  if (!dbRoom) return null;
-
-  const game = new TicTacToeGame();
-  game.init();
-  game.restoreState(dbRoom);
-
-  // Restore player slots from Prisma data
-  for (const player of dbRoom.players) {
-    if (player.role === "X" || player.role === "O") {
-      game.playerslot.roles[player.role] = player.user_id.toString();
-    }
-  }
-
-  room = roomManager.attachGame(
-    dbRoom.id,
-    game,
-    broadcaster,
-    dbRoom.owner_id.toString()
-  );
-
-  return room;
+  return await loadAndValidateRoomSafe(roomId);
 }
 
 /**

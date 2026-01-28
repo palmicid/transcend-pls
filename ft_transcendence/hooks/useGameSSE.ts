@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // =============================================================================
 // TYPES
@@ -57,6 +57,15 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
   const [error, setError] = useState<string | null>(null);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
 
+  // Keep userId in a ref so the message handler always uses the current value
+  // without requiring the effect to re-run (which would disconnect and reconnect)
+  const userIdRef = useRef(userId);
+
+  // Update ref whenever userId changes, but don't reconnect the SSE
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
+
   useEffect(() => {
     if (!roomId || !sseUrl) return;
 
@@ -83,15 +92,17 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
         if (data.roomId && data.board !== undefined) {
           const players: PlayerInfo[] = data.players || [];
 
-          // Derive myRole whenever we have players data and a userId
-          if (userId) {
-            const derived = players.find((p) => p.userId === userId)?.role || null;
+          // Derive myRole from players list using current userId (via ref)
+          // Use ref instead of adding userId to dependency array to avoid reconnecting
+          // the SSE whenever userId changes
+          if (userIdRef.current) {
+            const derived = players.find((p) => p.userId === userIdRef.current)?.role || null;
             if (derived) {
               setMyRole(derived);
             }
           }
 
-          // Update myRole if provided explicitly (initial snapshot)
+          // Update myRole if provided explicitly in the event (initial snapshot)
           if (data.myRole) {
             setMyRole(data.myRole);
           }
@@ -125,6 +136,9 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
       console.log("[SSE] Closing connection");
       eventSource.close();
     };
+    // Dependency array: only reconnect if roomId or sseUrl changes
+    // userId is intentionally omitted and tracked via ref instead to avoid
+    // unnecessary reconnections (which would interrupt the stream)
   }, [roomId, sseUrl]);
 
   return { snapshot, isConnected, myRole, error, lastEvent };
