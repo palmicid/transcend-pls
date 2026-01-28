@@ -221,7 +221,17 @@ export async function GET(
   // Add player to Prisma and in-memory
   const role = await addPlayerToRoom(roomId, userId);
   if (role) {
-    room.addPlayer(userId.toString());
+    try {
+      room.addPlayer(userId.toString());
+    } catch (error) {
+      // Roll back Prisma change if in-memory update fails
+      try {
+        await removePlayerFromRoom(roomId, userId);
+      } catch {
+        // Swallow rollback errors to avoid masking the original failure
+      }
+      throw error;
+    }
   }
 
   return createSSEHandler({

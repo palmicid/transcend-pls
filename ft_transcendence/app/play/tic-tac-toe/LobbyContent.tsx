@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listAllRooms, deleteLobbyRoom, createTicTacToeRoom, type RoomInfo } from "./actions";
-import { logoutUser } from "@/app/auth/actions";
+
 import { ArrowLeft, Plus, RefreshCw, Trash2, Users, LogIn } from "lucide-react";
 import Link from "next/link";
 
