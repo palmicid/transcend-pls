@@ -135,16 +135,35 @@ function validateRoomState(dbRoom: DatabaseRoom): RoomValidationError[] {
     }
 
     // Validate current_turn is consistent with board state
-    if (
-      dbRoom.status === "IN_GAME" &&
-      dbRoom.current_turn &&
-      !["X", "O"].includes(dbRoom.current_turn)
-    ) {
-      errors.push({
-        code: "INVALID_BOARD_STATE",
-        message: `Invalid current_turn: ${dbRoom.current_turn}`,
-        severity: "error",
-      });
+    if (dbRoom.status === "IN_GAME") {
+      const currentTurn = dbRoom.current_turn;
+
+      // current_turn must be present and one of "X" or "O"
+      if (!currentTurn || !["X", "O"].includes(currentTurn)) {
+        errors.push({
+          code: "INVALID_BOARD_STATE",
+          message: `Invalid current_turn: ${currentTurn}`,
+          severity: "error",
+        });
+      } else {
+        // Determine whose turn it should be from the board counts:
+        // - When X and O counts are equal, it should be X's turn.
+        // - When X count is one more than O, it should be O's turn.
+        let expectedTurn: "X" | "O" | null = null;
+        if (boardXCount === boardOCount) {
+          expectedTurn = "X";
+        } else if (boardXCount === boardOCount + 1) {
+          expectedTurn = "O";
+        }
+
+        if (expectedTurn && currentTurn !== expectedTurn) {
+          errors.push({
+            code: "INVALID_BOARD_STATE",
+            message: `current_turn (${currentTurn}) does not match expected turn (${expectedTurn}) for board state X=${boardXCount}, O=${boardOCount}`,
+            severity: "error",
+          });
+        }
+      }
     }
   }
 
