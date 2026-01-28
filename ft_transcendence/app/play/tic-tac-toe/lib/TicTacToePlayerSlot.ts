@@ -97,6 +97,13 @@ export default class TicTacToePlayerSlot implements PlayerSlot {
    * @param role - The role to assign to the bot ("X" or "O")
    */
   assignBot(role: PlayerRole): void {
+    const current = this.roles[role];
+    // Prevent silently evicting a human player from this role
+    if (current !== null && current !== BOT_PLAYER_ID) {
+      throw new Error(
+        `Cannot assign bot to role "${role}": slot is occupied by a human player.`,
+      );
+    }
     this.roles[role] = BOT_PLAYER_ID;
   }
 
