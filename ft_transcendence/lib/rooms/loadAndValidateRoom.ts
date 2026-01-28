@@ -12,7 +12,7 @@
 
 import prisma from "@/lib/prisma";
 import { broadcaster } from "@/lib/broadcast";
-import TicTacToeGame from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
+import TicTacToeGame, { TicTacToePersistedState } from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
 import { PlayerRole } from "@/app/play/tic-tac-toe/lib/TicTacToePlayerSlot";
 import Room from "@/lib/rooms/Room";
 import type RoomManager from "@/lib/rooms/RoomManager";
@@ -324,7 +324,7 @@ export async function loadAndValidateRoom(roomId: string): Promise<Room | null> 
   // Hydrate in-memory game from database state
   const game = new TicTacToeGame();
   game.init();
-  game.restoreState(dbRoom);
+  game.restoreState(dbRoom as TicTacToePersistedState);
 
   // Restore player slots from Prisma data
   for (const player of dbRoom.players) {

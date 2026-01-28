@@ -1,8 +1,10 @@
 /**
  * @file RoomView.tsx
  * @description Game room view with player slots, board, and status.
+ *
  * Always displays:
  * - Player slots (X and O) with user info + connection status
+ * - Bot toggle for empty slots (when game not in progress)
  * - Game board (disabled when not in game or not your turn)
  * - Status banner
  */
@@ -14,7 +16,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { leaveLobbyRoom, submitTicTacToeMove, startTicTacToeGame } from "../actions";
 import useGameSSE, { PlayerInfo } from "@/hooks/useGameSSE";
-import { ArrowLeft, LogOut, Circle, X, Play, Loader2, User, Wifi, WifiOff } from "lucide-react";
+import BotSlotToggle from "../components/BotSlotToggle";
+import {
+  ArrowLeft,
+  LogOut,
+  Circle,
+  X,
+  Play,
+  Loader2,
+  User,
+  Wifi,
+  WifiOff,
+  Bot,
+} from "lucide-react";
 
 export type GameType = "tic-tac-toe";
 
@@ -41,11 +55,20 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
   const winner = snapshot?.winner || null;
   const isDraw = snapshot?.isDraw || false;
   const players = snapshot?.players || [];
+  const botConfig = snapshot?.bot || null;
 
   // Game state helpers
   const isGameInProgress = roomStatus === "IN_GAME";
   const isGameEnded = roomStatus === "ENDED" || !!winner || isDraw;
-  const canStartGame = roomStatus === "READY" && players.length >= 2;
+  const isLobby = roomStatus === "OPEN" || roomStatus === "READY";
+
+  // With bot, we can start with 1 human + 1 bot
+  const hasBot = !!botConfig;
+  const humanPlayerCount = players.filter((p) => !p.isBot).length;
+  const canStartGame =
+    (roomStatus === "READY" || roomStatus === "OPEN") &&
+    ((hasBot && humanPlayerCount >= 1) || players.length >= 2);
+
   const isMyTurn = isGameInProgress && myRole === currentTurn;
   const canClickBoard = isGameInProgress && isMyTurn && !winner && !isDraw;
 
@@ -75,7 +98,7 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     router.push("/play/tic-tac-toe");
   }, [roomId, userId, router]);
 
-  // Render player slot
+  // Render player slot with bot toggle support
   const renderPlayerSlot = (role: "X" | "O", player?: PlayerInfo) => {
     const isX = role === "X";
     const bgColor = isX ? "bg-cyan-500/10" : "bg-fuchsia-500/10";
@@ -84,6 +107,11 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     const Icon = isX ? X : Circle;
     const isCurrentTurn = isGameInProgress && currentTurn === role;
     const isMe = myRole === role;
+    const isEmpty = !player;
+    const isBot = player?.isBot ?? false;
+
+    // Can toggle bot when in lobby and slot is empty or has bot
+    const canToggleBot = isLobby && (isEmpty || isBot);
 
     return (
       <div
@@ -102,31 +130,64 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
                 You
               </span>
             )}
+            {isBot && (
+              <span className="text-xs bg-cyan-500/20 px-2 py-0.5 rounded-full text-cyan-300">
+                🤖 Bot
+              </span>
+            )}
           </div>
-          {player && (
-            <span className="flex items-center gap-1 text-xs">
-              {player.isConnected ? (
-                <Wifi className="h-3 w-3 text-emerald-400" />
-              ) : (
-                <WifiOff className="h-3 w-3 text-red-400" />
-              )}
-            </span>
-          )}
+
+          <div className="flex items-center gap-2">
+            {/* Bot toggle for empty slots or bot slots */}
+            {canToggleBot && (
+              <BotSlotToggle
+                roomId={roomId}
+                role={role}
+                isBot={isBot}
+                isEmpty={isEmpty}
+                currentDifficulty={botConfig?.difficulty}
+                disabled={isGameInProgress || isGameEnded}
+              />
+            )}
+
+            {/* Connection status for human players */}
+            {player && !isBot && (
+              <span className="flex items-center gap-1 text-xs">
+                {player.isConnected ? (
+                  <Wifi className="h-3 w-3 text-emerald-400" />
+                ) : (
+                  <WifiOff className="h-3 w-3 text-red-400" />
+                )}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Player info */}
         {player ? (
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-white/50" />
+            {isBot ? (
+              <Bot className="h-4 w-4 text-cyan-400" />
+            ) : (
+              <User className="h-4 w-4 text-white/50" />
+            )}
             <span className="text-sm text-white truncate">{player.displayName}</span>
           </div>
         ) : (
           <div className="text-sm text-white/40 flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Waiting...
+            Waiting for player...
           </div>
         )}
+
+        {/* Turn indicator */}
         {isCurrentTurn && (
-          <div className={`mt-2 text-xs font-medium ${isMe ? "text-emerald-300" : "text-amber-300"}`}>
-            {isMe ? "→ Your turn!" : "← Playing..."}
+          <div
+            className={`mt-2 text-xs font-medium ${
+              isMe ? "text-emerald-300" : isBot ? "text-cyan-300" : "text-amber-300"
+            }`}
+          >
+            {isMe ? "→ Your turn!" : isBot ? "🤖 Bot thinking..." : "← Playing..."}
           </div>
         )}
       </div>
@@ -138,19 +199,35 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     if (!isConnected) return { text: "Connecting...", color: "text-white/50" };
     if (winner) {
       const didIWin = winner === myRole;
-      return {
-        text: didIWin ? "🎉 You Win!" : `😔 ${winner} Wins`,
-        color: didIWin ? "text-emerald-300" : "text-red-300",
-      };
+      const botWon = botConfig?.role === winner;
+      if (didIWin) {
+        return { text: "🎉 You Win!", color: "text-emerald-300" };
+      } else if (botWon) {
+        return { text: "🤖 Bot Wins!", color: "text-cyan-300" };
+      } else {
+        return { text: `😔 ${winner} Wins`, color: "text-red-300" };
+      }
     }
     if (isDraw) return { text: "🤝 It's a Draw!", color: "text-amber-300" };
     if (isGameInProgress) {
-      return isMyTurn
-        ? { text: "🎯 Your turn — make a move!", color: "text-emerald-300" }
-        : { text: "⏳ Opponent's turn...", color: "text-white/60" };
+      const isBotTurn = botConfig?.role === currentTurn;
+      if (isMyTurn) {
+        return { text: "🎯 Your turn — make a move!", color: "text-emerald-300" };
+      } else if (isBotTurn) {
+        return { text: "🤖 Bot is thinking...", color: "text-cyan-300" };
+      } else {
+        return { text: "⏳ Opponent's turn...", color: "text-white/60" };
+      }
     }
-    if (canStartGame) return { text: "✓ Both players ready! Click Start.", color: "text-emerald-300" };
-    return { text: `Waiting for players (${players.length}/2)`, color: "text-white/50" };
+    if (canStartGame) {
+      return { text: "✓ Ready to play! Click Start.", color: "text-emerald-300" };
+    }
+    return {
+      text: hasBot
+        ? `Waiting for you to join (${humanPlayerCount}/1)`
+        : `Waiting for players (${players.length}/2)`,
+      color: "text-white/50",
+    };
   };
 
   const status = getStatusMessage();
@@ -171,12 +248,25 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
               Room: {roomId}
             </h1>
             <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
-              <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-400" : "bg-red-400"}`} />
+              <span
+                className={`h-2 w-2 rounded-full ${isConnected ? "bg-emerald-400" : "bg-red-400"}`}
+              />
               {isConnected ? "Connected" : "Connecting..."}
               {myRole && (
                 <>
                   <span>•</span>
-                  <span>You are <span className={myRole === "X" ? "text-cyan-400" : "text-fuchsia-400"}>{myRole}</span></span>
+                  <span>
+                    You are{" "}
+                    <span className={myRole === "X" ? "text-cyan-400" : "text-fuchsia-400"}>
+                      {myRole}
+                    </span>
+                  </span>
+                </>
+              )}
+              {hasBot && (
+                <>
+                  <span>•</span>
+                  <span className="text-cyan-400">🤖 vs Bot</span>
                 </>
               )}
             </div>
@@ -207,7 +297,9 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
           </div>
 
           {/* Status Banner */}
-          <div className={`text-center py-3 px-4 rounded-2xl border border-white/10 bg-white/[0.02] ${status.color}`}>
+          <div
+            className={`text-center py-3 px-4 rounded-2xl border border-white/10 bg-white/[0.02] ${status.color}`}
+          >
             {status.text}
           </div>
 

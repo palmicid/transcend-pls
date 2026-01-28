@@ -131,7 +131,9 @@ async function addPlayerToRoom(roomId: string, userId: number): Promise<string |
   });
 
   // Update room status if now full
-  if (room.players.length + 1 >= room.max_players) {
+  // Account for bot - if bot is configured, it counts as a player
+  const totalPlayers = room.players.length + 1 + (room.bot_role ? 1 : 0);
+  if (totalPlayers >= room.max_players) {
     await prisma.room.update({
       where: { id: roomId },
       data: { status: "READY" },

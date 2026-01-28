@@ -19,6 +19,15 @@ export interface PlayerInfo {
   displayName: string;
   role: string | null;
   isConnected: boolean;
+  /** Whether this player is the bot */
+  isBot?: boolean;
+}
+
+/** Bot configuration as broadcast via SSE */
+export interface BotInfo {
+  role: string;
+  difficulty: 1 | 3 | 9;
+  delayMs: number;
 }
 
 export interface RoomSnapshot {
@@ -31,6 +40,8 @@ export interface RoomSnapshot {
   players: PlayerInfo[];
   maxPlayers: number;
   myRole?: string | null;
+  /** Bot configuration, if a bot is in the game */
+  bot?: BotInfo | null;
 }
 
 export interface UseGameSSEResult {
