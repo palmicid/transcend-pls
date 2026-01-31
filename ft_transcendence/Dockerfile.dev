@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+# prisma + native deps
+RUN apk add --no-cache \
+  libc6-compat openssl \
+  python3 make g++ \
+  bash
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+# RUN npm ci
+RUN npm ci --verbose || (echo "---- npm logs ----" && ls -lah /root/.npm/_logs && tail -n 200 /root/.npm/_logs/*debug-0.log && exit 1)
+
+COPY . .
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
