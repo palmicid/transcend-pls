@@ -24,6 +24,7 @@ model User {
   updated_at    DateTime @updatedAt
   secret        String   @default("")
   is_verified   Boolean  @default(false)
+  use2FA        Boolean  @default(true)
 
   // Google Auth Relation
   googleAuth oauth[]

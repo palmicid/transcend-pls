@@ -42,6 +42,7 @@ async function main() {
       display_name: "Mobile",
       password: mobilePassword,
       online_status: true,
+      use2FA: false,
     },
   });
   
@@ -51,6 +52,7 @@ async function main() {
       display_name: "Ohm",
       password: ohmPassword,
       online_status: true,
+      use2FA: false,
     },
   }),
 
@@ -59,7 +61,8 @@ async function main() {
       email: "palm@example.com",
       display_name: "Palm",
       password: palmPassword,
-      online_status: false
+      online_status: false,
+      use2FA: false,
     },
 
   }),
@@ -70,6 +73,7 @@ async function main() {
       display_name: "Grammy",
       password: grammyPassword,
       online_status: false,
+      use2FA: false,
     },
   }),
 
@@ -79,6 +83,7 @@ async function main() {
       display_name: "Sound",
       password: soundPassword,
       online_status: false,
+      use2FA: false,
     },
   });
 
