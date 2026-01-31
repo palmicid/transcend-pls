@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     .sign(SECRET_KEY)
 
     const response = NextResponse.json({
+      ok: true,
       success: true,
       message: 'Logged in successfully',
     });
