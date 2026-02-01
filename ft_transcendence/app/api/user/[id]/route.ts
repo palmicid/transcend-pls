@@ -1,8 +1,7 @@
 import { NextResponse, NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
-// import { Prisma } from "@prisma/client/"
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from "@prisma/client/runtime/client"
-import { Exo } from "next/font/google"
+import { userService } from "@/services/userService"
 
 // Get user by ID
 export async function GET(
@@ -11,7 +10,7 @@ export async function GET(
 ){
   const { id } = await params
   try {
-    const user = await prisma.user.findUnique({ where: {id: parseInt(id)} })
+    const user = await userService.getUserById(parseInt(id));
     if (!user)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     return NextResponse.json(user, { status: 200 })
@@ -24,7 +23,7 @@ export async function GET(
 }
 
 // Update user by ID
-export async function PUT(
+export async function PATCH(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -41,7 +40,6 @@ export async function PUT(
     })
     return NextResponse.json(updateUser, { status: 201 })
   } catch (err) {
-    console.log(err)
     if (err instanceof PrismaClientKnownRequestError){
       if (err.code == 'P2025') 
         return NextResponse.json({ error: 'User not found' }, { status: 404 })

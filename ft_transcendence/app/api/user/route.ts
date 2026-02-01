@@ -1,10 +1,12 @@
 import { NextResponse, NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
+import { userService } from "@/services/userService"
+import bcrypt from "bcryptjs";
 
 // Get all users
 export async function GET() {
   try {
-    const users = await prisma.user.findMany()
+    const users = await userService.getAllUsers();
     return NextResponse.json(users)
   } catch (err) {
     return NextResponse.json(
@@ -22,7 +24,9 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         email: body.email,
-        name: body.name,
+        display_name: body.display_name,
+        password: body.password
+        // password: bcrypt.hash(body.password, process.env())
       },
     })
 
