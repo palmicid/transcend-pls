@@ -1,3 +1,5 @@
+"use client";
+
 import { LogIn } from "lucide-react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";

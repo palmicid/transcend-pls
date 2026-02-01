@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { setUserId } from "@/lib/auth";
+import { setUserId } from "@/lib/auth/auth-session";
 
 export async function POST(req: Request) {
     try {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
             },
         });
 
-        await setUserId(String(newUser.id));
+        await setUserId(newUser.id);
 
         newUser.display_name = `Player${newUser.id}`;
         await prisma.user.update({
