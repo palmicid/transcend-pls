@@ -22,30 +22,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // create JWT payload
-    const token = await new SignJWT({
-      userId: user.id,
-      final_2fa: user.use2FA
-    })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('24h')
-    .sign(SECRET_KEY)
-
     const response = NextResponse.json({
       ok: true,
       success: true,
       message: 'Logged in successfully',
     });
 
-    // set HTTP only cookie (stateless auth)
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      path: '/',
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 1-day in sec
-    });
+    await setUserId(user.id);
 
     return response;
 
