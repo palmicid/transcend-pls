@@ -21,7 +21,7 @@ export async function PATCH(
         return NextResponse.json(updateFriendRelation, { status: 200 });
     } catch (err) {
         return NextResponse.json(
-        { error: "Failed to update user" },
+        { error: "Failed to update friend relation" },
         { status: 500 }
         )
     }
@@ -53,7 +53,7 @@ export async function DELETE(
         return NextResponse.json(deleteFriendRelation, { status: 201 });
     } catch (err) {
         return NextResponse.json(
-        { error: "Failed to delete user" },
+        { error: "Failed to delete friend relation" },
         { status: 500 }
         )
     }

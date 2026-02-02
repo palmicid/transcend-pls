@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError){
       if (err.code == 'P2002') 
-        return NextResponse.json({ error: 'Email already exist.' }, { status: 404 })
+        return NextResponse.json({ error: 'Email already exists.' }, { status: 409 })
     }
     return NextResponse.json(
       { error: "Failed to create user" },
