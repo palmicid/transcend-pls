@@ -19,6 +19,12 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
+    if (!body.userId || !body.friendId){
+      return NextResponse.json(
+        { error: "Invalid user ID/friend ID" },
+        { status: 400 }
+      )
+    }
     if (body.userId === body.friendId){
       return NextResponse.json(
         { error: "Users cannot add themselves as a friend" },

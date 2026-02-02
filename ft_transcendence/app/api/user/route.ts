@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { userService } from "@/services/userService"
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client"
 import bcrypt from "bcryptjs";
 
 // Get all users
@@ -32,6 +33,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json(user, { status: 201 })
   } catch (err) {
+    if (err instanceof PrismaClientKnownRequestError){
+      if (err.code == 'P2002') 
+        return NextResponse.json({ error: 'Email already exist.' }, { status: 404 })
+    }
     return NextResponse.json(
       { error: "Failed to create user" },
       { status: 500 }

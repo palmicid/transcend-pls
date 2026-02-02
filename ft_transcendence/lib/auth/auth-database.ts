@@ -11,7 +11,6 @@ export async function syncUserWithDatabase(
   userInfo: UserInfo, 
   tokenData: TokenResponse
 ) {
-  console.log(userInfo.email, userInfo.sub);
   if (!userInfo.email || !userInfo.sub) {
     throw new Error("Missing required user info for database sync");
   }
