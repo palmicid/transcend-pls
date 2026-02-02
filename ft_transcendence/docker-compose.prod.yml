@@ -1,0 +1,25 @@
+# Production environment overlay
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  web:
+    container_name: nextjs-app-prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    profiles:
+      - prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  db:
+    profiles:
+      - dev
+      - prod

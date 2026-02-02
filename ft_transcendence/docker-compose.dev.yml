@@ -1,0 +1,24 @@
+# Development environment overlay
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  web:
+    container_name: nextjs-app-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+    profiles:
+      - dev
+
+  db:
+    profiles:
+      - dev
+      - prod

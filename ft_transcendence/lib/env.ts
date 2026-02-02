@@ -33,6 +33,19 @@ const envSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+
+  // Auth
+  GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_SECRET: z.string(),
+  GOOGLE_REDIRECT_URI: z.string().url().default('http://localhost:3000/api/auth/callback/google'),
+  GITHUB_CLIENT_ID: z.string(),
+  GITHUB_CLIENT_SECRET: z.string(),
+  GITHUB_REDIRECT_URI: z.string().url().default('http://localhost:3000/api/auth/callback/github'),
+  FTBK_CLIENT_ID: z.string(),
+  FTBK_CLIENT_SECRET: z.string(),
+  FTBK_REDIRECT_URI: z.string().url().default('http://localhost:3000/api/auth/callback/42'),
+  ENCRYPTION_KEY: z.string(),
+  JWT_SECRET: z.string(),
 });
 
 /**

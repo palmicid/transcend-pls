@@ -1,0 +1,25 @@
+# Ollama service overlay
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ollama.yml up
+
+services:
+  ollama:
+    container_name: ollama
+    build: ./ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_MODEL=llama3
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+    profiles:
+      - ollama
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+
+volumes:
+  ollama:
