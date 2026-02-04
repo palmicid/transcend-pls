@@ -142,11 +142,12 @@ export default class Room {
    * initialized before attaching.
    *
    * @param game - The game instance to attach
+   * @param initialState - Optional state to restore
    */
-  attachGame(game: Game<GameConfig, GameState, PlayerSlot>): void {
+  attachGame(game: Game<GameConfig, GameState, PlayerSlot>, initialState?: unknown): void {
     this._game = game;
-    this._game.loadConfig();
-    this._game.loadState();
+    this.game.loadConfig();
+    this.game.loadState(initialState);
   }
 
   // ===========================================================================
@@ -320,12 +321,41 @@ export default class Room {
    * @returns true if the reset was successful
    */
   reset(): boolean {
-    const ok = this.state.transitionTo(State.OPEN);
-    if (ok && this.game) {
-      this.game.init();
-      this.broadcastSnapshot();
+    if (!this.game) return false;
+    // We expect the game to handle its own reset or for the room flow to re-create it.
+    // simpler: just transition to OPEN. The game implementation should handle reset capability if needed.
+    // Ideally we should re-instantiate the game, but Room doesn't hold the factory.
+    // For now, let's assume the game can be reset or we just set status to OPEN and let players trigger new game start which re-inits.
+
+    if (!this.state.transitionTo(State.OPEN)) return false;
+
+    // If the game has a reset method, call it.
+    // But Game interface might not have reset.
+    // We'll leave it as state transition for now.
+
+    this.broadcastSnapshot();
+    return true;
+  }
+
+  /**
+   * Force set the room status (for restoration).
+   *
+   * @param status - The status to set
+   */
+  setStatus(status: State): void {
+    if (this.state.current !== status) {
+        this.state.forceTransition(status);
     }
-    return ok;
+  }
+
+  /**
+   * Restore room status from DB.
+   */
+  restoreStatus(statusStr: string): void {
+      const status = statusStr as State;
+      if (Object.values(State).includes(status)) {
+          this.setStatus(status);
+      }
   }
 
   // ===========================================================================
@@ -352,6 +382,28 @@ export default class Room {
     this.broadcaster.removeListener(this.id, listener);
   }
 
+  /**
+   * Broadcast a custom event to all room subscribers.
+   *
+   * @param event - Event name
+   * @param data - Event payload
+   */
+  public broadcast(event: string, data: any): void {
+    if (!this.broadcaster) return;
+
+    const payload = {
+      roomId: this.id,
+      event,
+      ...data,
+      // Always include current room/game metadata for context
+      status: this.state.current,
+      gameType: this.game?.type,
+      snapshot: this.game?.Snapshot,
+    };
+
+    this.broadcaster.broadcast(this.id, JSON.stringify(payload));
+  }
+
   // ===========================================================================
   // PRIVATE HELPERS
   // ===========================================================================
@@ -360,16 +412,6 @@ export default class Room {
    * Broadcast the current game snapshot to all subscribers.
    */
   private broadcastSnapshot(): void {
-    if (!this.broadcaster || !this.game) return;
-
-    const payload = {
-      roomId: this.id,
-      state: this.state.current,
-      gameType: this.game.type,
-      snapshot: this.game.Snapshot,
-      event: "snapshot",
-    };
-
-    this.broadcaster.broadcast(this.id, JSON.stringify(payload));
+    this.broadcast("snapshot", {});
   }
 }

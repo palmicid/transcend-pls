@@ -73,65 +73,10 @@ export default function BotSlotToggle({
   if (!isEmpty && !isBot) return null;
 
   return (
-    <div className="relative">
-      <button
-        onClick={handleToggleBot}
-        disabled={disabled || loading}
-        className={`
-          flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all
+    /**
+     * @file BotSlotToggle.tsx
+     * @description Re-export shared BotSlotToggle component.
+     */
+
+    export { default } from "@/components/game/BotSlotToggle";
           ${
-            isBot
-              ? "bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30"
-              : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 border border-white/10"
-          }
-          disabled:opacity-50 disabled:cursor-not-allowed
-        `}
-      >
-        {loading ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : isBot ? (
-          <>
-            <Bot className="h-3 w-3" />
-            <span>Remove</span>
-          </>
-        ) : (
-          <>
-            <User className="h-3 w-3" />
-            <span>Add Bot</span>
-            <ChevronDown className="h-3 w-3" />
-          </>
-        )}
-      </button>
-
-      {/* Difficulty dropdown */}
-      {showDifficulty && (
-        <>
-          {/* Backdrop to close on click outside */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={handleCancelDifficulty}
-          />
-
-          <div className="absolute top-full mt-2 left-0 z-20 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl p-2 min-w-[140px]">
-            <div className="text-xs text-white/40 px-2 py-1 mb-1">
-              Select Difficulty
-            </div>
-            {difficulties.map(({ value, label, desc }) => (
-              <button
-                key={value}
-                onClick={() => handleSetDifficulty(value)}
-                disabled={loading}
-                className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/10 transition group disabled:opacity-50"
-              >
-                <div className="text-sm font-medium text-white group-hover:text-cyan-300 transition">
-                  {label}
-                </div>
-                <div className="text-xs text-white/40">{desc}</div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}

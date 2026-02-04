@@ -142,10 +142,11 @@ class RoomManager {
     roomId: string,
     game: Game<GameConfig, GameState, PlayerSlot>,
     broadcaster?: Broadcaster,
-    ownerId?: string
+    ownerId?: string,
+    initialState?: unknown
   ): Room {
     const room = this.ensureRoom(roomId, broadcaster, ownerId);
-    room.attachGame(game);
+    room.attachGame(game, initialState);
     return room;
   }
 

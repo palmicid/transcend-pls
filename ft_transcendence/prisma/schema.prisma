@@ -38,14 +38,14 @@ model User {
   ttt_player2 Game_ttt[] @relation("Player2")
   ttt_winner  Game_ttt[] @relation("Winner")
 
-  // Relations for Rock Paper Scissors
-  rps_player1 Game_rps[] @relation("Player1")
-  rps_player2 Game_rps[] @relation("Player2")
-  rps_winner  Game_rps[] @relation("Winner")
-
   // Room relations
-  ownedRooms  Room[]       @relation("RoomOwner")
-  roomPlayers RoomPlayer[] @relation("RoomPlayers")
+  ownedRooms Room[]       @relation("RoomOwner")
+  rooms      RoomPlayer[] @relation("RoomPlayers")
+
+  // Game Results
+  gamesAsPlayer1 GameResult[] @relation("GamePlayer1")
+  gamesAsPlayer2 GameResult[] @relation("GamePlayer2")
+  gamesWon       GameResult[] @relation("GameWinner")
 }
 
 // Friendships Model
@@ -66,18 +66,6 @@ model FriendRelation {
 
 // Tic Tac Toe Game Model
 model Game_ttt {
-  id         Int      @id @default(autoincrement())
-  player1_id Int
-  player1    User     @relation("Player1", fields: [player1_id], references: [id])
-  player2_id Int
-  player2    User     @relation("Player2", fields: [player2_id], references: [id])
-  winner_id  Int?
-  winner     User?    @relation("Winner", fields: [winner_id], references: [id])
-  created_at DateTime @default(now())
-}
-
-// Rock Paper Scissors Game Model
-model Game_rps {
   id         Int      @id @default(autoincrement())
   player1_id Int
   player1    User     @relation("Player1", fields: [player1_id], references: [id])
@@ -134,4 +122,31 @@ model RoomPlayer {
 
   @@id([room_id, user_id])
   @@unique([room_id, user_id])
+}
+
+/// Permanent record of completed games (remote only, no bots)
+model GameResult {
+  id Int @id @default(autoincrement())
+
+  game_type String // "tic-tac-toe", "connect4"
+  room_id   String? // Optional link to source Room
+
+  player1_id Int
+  player1    User @relation("GamePlayer1", fields: [player1_id], references: [id])
+  player2_id Int
+  player2    User @relation("GamePlayer2", fields: [player2_id], references: [id])
+
+  winner_id Int? // null = draw
+  winner    User?   @relation("GameWinner", fields: [winner_id], references: [id])
+  is_draw   Boolean @default(false)
+
+  duration_ms Int?
+
+  started_at DateTime
+  ended_at   DateTime @default(now())
+
+  @@index([player1_id])
+  @@index([player2_id])
+  @@index([winner_id])
+  @@index([game_type])
 }

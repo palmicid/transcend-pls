@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { getSession } from "@/lib/auth/auth-session";
-import { getRoomMeta } from "../actions";
+import { getRoomMeta } from "@/app/play/actions";
 import { MainLayout } from "@/components/layout/MainLayout";
 import RoomView, { GameType } from "./RoomView";
 

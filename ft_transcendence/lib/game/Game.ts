@@ -50,7 +50,7 @@ export default abstract class Game<
    * Used to distinguish between different game implementations.
    * Should be a lowercase kebab-case string.
    *
-   * @example 'tic-tac-toe', 'pong', 'rock-paper-scissors'
+   * @example 'tic-tac-toe', 'connect4'
    */
   abstract get type(): string;
 
@@ -169,8 +169,9 @@ export default abstract class Game<
    * Load or initialize the game state.
    *
    * Called when setting up a new game. Can load from database or create fresh state.
+   * @param data - Optional data to restore state from (e.g. from DB)
    */
-  abstract loadState(): void;
+  abstract loadState(data?: unknown): void;
 
   /**
    * Update the game state after an action.

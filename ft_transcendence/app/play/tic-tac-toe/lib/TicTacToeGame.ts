@@ -269,6 +269,10 @@ export default class TicTacToeGame extends Game<
     if (role === this.gameState.currentTurn && this.gameState.board[move.cell] === null) {
       this.gameState.board[move.cell] = role;
       this.gameState.currentTurn = this.gameState.currentTurn === "X" ? "O" : "X";
+      this.updateState(); // Check for winner
+
+      // Trigger bot if it's now its turn
+      this.scheduleBotMoveIfNeeded();
     }
   }
 
@@ -291,8 +295,12 @@ export default class TicTacToeGame extends Game<
   // GAME STATE
   // ===========================================================================
 
-  loadState(): void {
-    this.gameState = new TicTacToeState();
+  loadState(data?: any): void {
+    if (data) {
+      this.restoreState(data);
+    } else {
+      this.gameState = new TicTacToeState();
+    }
   }
 
   /**
@@ -325,6 +333,15 @@ export default class TicTacToeGame extends Game<
         data.bot_difficulty as BotDifficulty,
         data.bot_delay_ms ?? 500
       );
+    }
+
+    // Restore players
+    if (data.players && Array.isArray(data.players)) {
+      data.players.forEach((p: any) => {
+        if (p.role === "X" || p.role === "O") {
+          this.playerslot.roles[p.role as PlayerRole] = p.user_id.toString();
+        }
+      });
     }
   }
 
