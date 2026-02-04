@@ -145,7 +145,7 @@ export default class Room {
    * @param initialState - Optional state to restore
    */
   attachGame(game: Game<GameConfig, GameState, PlayerSlot>, initialState?: unknown): void {
-    this.game = game;
+    this._game = game;
     this.game.loadConfig();
     this.game.loadState(initialState);
   }

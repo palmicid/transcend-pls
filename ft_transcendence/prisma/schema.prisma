@@ -38,11 +38,6 @@ model User {
   ttt_player2 Game_ttt[] @relation("Player2")
   ttt_winner  Game_ttt[] @relation("Winner")
 
-  // Relations for Rock Paper Scissors
-  rps_player1 Game_rps[] @relation("Player1")
-  rps_player2 Game_rps[] @relation("Player2")
-  rps_winner  Game_rps[] @relation("Winner")
-
   // Room relations
   ownedRooms  Room[]       @relation("RoomOwner")
   roomPlayers RoomPlayer[] @relation("RoomPlayers")
@@ -66,18 +61,6 @@ model FriendRelation {
 
 // Tic Tac Toe Game Model
 model Game_ttt {
-  id         Int      @id @default(autoincrement())
-  player1_id Int
-  player1    User     @relation("Player1", fields: [player1_id], references: [id])
-  player2_id Int
-  player2    User     @relation("Player2", fields: [player2_id], references: [id])
-  winner_id  Int?
-  winner     User?    @relation("Winner", fields: [winner_id], references: [id])
-  created_at DateTime @default(now())
-}
-
-// Rock Paper Scissors Game Model
-model Game_rps {
   id         Int      @id @default(autoincrement())
   player1_id Int
   player1    User     @relation("Player1", fields: [player1_id], references: [id])

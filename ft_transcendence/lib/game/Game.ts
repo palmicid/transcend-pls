@@ -50,7 +50,7 @@ export default abstract class Game<
    * Used to distinguish between different game implementations.
    * Should be a lowercase kebab-case string.
    *
-   * @example 'tic-tac-toe', 'pong', 'connect4'
+   * @example 'tic-tac-toe', 'connect4'
    */
   abstract get type(): string;
 

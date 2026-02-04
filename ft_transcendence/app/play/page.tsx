@@ -60,29 +60,29 @@ export default async function PlayPage() {
           </div>
         </Link>
 
-        {/* Rock Paper Scissors */}
+        {/* Connect 4 */}
         <Link
-            href="/play/connect4"
+          href="/play/connect4"
           className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:p-6 hover:bg-black/20 transition block hover:text-emerald-400"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="h-12 w-12 rounded-2xl border border-white/10 bg-white/5 grid place-items-center transition-all duration-200 group-hover:scale-110 group-hover:bg-emerald-500/20 group-hover:border-emerald-400/40 group-hover:shadow-[0_0_30px_rgba(52,211,153,0.45)]">
               <Gamepad2 className="h-6 w-6 text-emerald-300 group-hover:text-emerald-200 transition" />
             </div>
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
-              Coming Soon
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+              Play Now
             </span>
           </div>
 
           <div className="mt-4">
             <div className="text-lg font-semibold tracking-tight group-hover:translate-x-0.5 transition">
-              Rock–Paper–Scissors
+              Connect 4
             </div>
             <p className="mt-1 text-sm text-white/70">
-              Fast rounds to settle any debate. Best of 3?
+              Drop discs to connect 4 in any direction!
             </p>
             <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white">
-              View Details <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 transition" />
+              Enter Lobby <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 transition" />
             </div>
           </div>
         </Link>

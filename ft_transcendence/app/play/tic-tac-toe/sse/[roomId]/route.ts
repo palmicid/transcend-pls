@@ -4,7 +4,6 @@
 
 import { createGameSSERouteHandler } from "@/lib/sse/createGameSSEHandler";
 
-export const GET = createGameSSERouteHandler("tic-tac-toe");
 import { NextRequest, NextResponse } from "next/server";
 import { createSSEHandler } from "@/lib/sse/createSSEHandler";
 import { getSession } from "@/lib/auth/auth-session";
