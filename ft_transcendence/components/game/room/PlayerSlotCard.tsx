@@ -23,6 +23,8 @@ interface PlayerSlotCardProps {
     border: string;
     text: string;
   };
+  onSwitchHere?: () => void;
+  isGameInProgress?: boolean;
 }
 
 export default function PlayerSlotCard({
@@ -33,6 +35,8 @@ export default function PlayerSlotCard({
   isMe,
   action,
   colorClasses,
+  onSwitchHere,
+  isGameInProgress,
 }: PlayerSlotCardProps) {
   return (
     <div
@@ -74,9 +78,19 @@ export default function PlayerSlotCard({
           <span className="text-sm text-white truncate">{player.displayName}</span>
         </div>
       ) : (
-        <div className="text-sm text-white/40 flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Waiting...
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-sm text-white/40 flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Waiting...
+          </div>
+          {onSwitchHere && !isMe && !isGameInProgress && (
+            <button
+              onClick={onSwitchHere}
+              className="text-[10px] font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white/70 px-2 py-1 rounded transition-colors"
+            >
+              Switch Here
+            </button>
+          )}
         </div>
       )}
       {isCurrentTurn && (

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { leaveLobbyRoom } from "@/app/play/actions";
-import { submitConnect4Move, startConnect4Game, setBotForSlot, removeBotFromSlot } from "../actions";
+import { submitConnect4Move, startConnect4Game, setBotForSlot, removeBotFromSlot, switchToSlot } from "../actions";
 import useGameSSE from "@/hooks/useGameSSE";
 import GameRoomShell from "@/components/game/room/GameRoomShell";
 import PlayerSlotCard from "@/components/game/room/PlayerSlotCard";
@@ -17,6 +17,7 @@ import {
   createStartHandler,
   createMoveHandler,
   createBotHandlers,
+  createSwitchHandler,
 } from "@/components/game/room/roomViewUtils";
 import { Play } from "lucide-react";
 
@@ -88,6 +89,12 @@ export default function RoomView({ roomId, userId, initialState }: RoomViewProps
     onError: console.error,
   });
 
+  const handleSwitch = createSwitchHandler<"Red" | "Yellow">({
+    roomId,
+    switchFn: switchToSlot,
+    onError: console.error,
+  });
+
   // Status message
   const status = getRoomStatusMessage({
     isConnected,
@@ -124,6 +131,8 @@ export default function RoomView({ roomId, userId, initialState }: RoomViewProps
             player={playerRed}
             isCurrentTurn={isGameInProgress && currentTurn === "Red"}
             isMe={isMe("Red")}
+            onSwitchHere={() => handleSwitch("Red")}
+            isGameInProgress={isGameInProgress}
             colorClasses={{
               bg: "bg-red-500/10",
               border: "border-red-500/30",
@@ -148,6 +157,8 @@ export default function RoomView({ roomId, userId, initialState }: RoomViewProps
             player={playerYellow}
             isCurrentTurn={isGameInProgress && currentTurn === "Yellow"}
             isMe={isMe("Yellow")}
+            onSwitchHere={() => handleSwitch("Yellow")}
+            isGameInProgress={isGameInProgress}
             colorClasses={{
               bg: "bg-yellow-500/10",
               border: "border-yellow-500/30",

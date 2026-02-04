@@ -102,6 +102,19 @@ export function createBotHandlers<TRole extends string>(params: {
   return { handleSetBot, handleRemoveBot };
 }
 
+export function createSwitchHandler<TRole extends string>(params: {
+  roomId: string;
+  switchFn: (args: { roomId: string; targetRole: TRole }) => Promise<{ error?: string } | void>;
+  onError?: (message: string) => void;
+}) {
+  const { roomId, switchFn, onError } = params;
+
+  return async (targetRole: TRole) => {
+    const res = await switchFn({ roomId, targetRole });
+    if (res && res.error && onError) onError(res.error);
+  };
+}
+
 export function getLobbyState(params: {
   roomStatus: RoomStatus | string | null | undefined;
   players: PlayerInfo[];

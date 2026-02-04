@@ -98,3 +98,51 @@ export async function removeBotFromSlot(roomId: string) {
   revalidatePath(`/play/connect4/${roomId}`);
   return { ok: true };
 }
+
+/**
+ * Switch the current player to a different slot in the room.
+ */
+export async function switchToSlot(params: {
+  roomId: string;
+  targetRole: "Red" | "Yellow";
+}) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  const { roomId, targetRole } = params;
+
+  // 1. Load room
+  const room = roomManager.getRoom(roomId);
+  if (!room) return { error: "Room not found" };
+
+  // 2. Security: Validate game status (cannot switch during/after game)
+  if (room.status !== "OPEN" && room.status !== "READY") {
+    return { error: "Cannot switch spots once game has started" };
+  }
+
+  // 3. Update in-memory playerslot
+  const game = room.game as any;
+  const playerslot = game.playerslot;
+  const success = playerslot.switchTo(session.userId.toString(), targetRole);
+
+  if (!success) {
+    return { error: "Slot not available or already occupied" };
+  }
+
+  // 4. Update DB persistence
+  await prisma.roomPlayer.update({
+    where: {
+      room_id_user_id: {
+        room_id: roomId,
+        user_id: session.userId,
+      },
+    },
+    data: { role: targetRole },
+  });
+
+  // 5. Broadcast update
+  await broadcastRoomSnapshot(roomId, "player_switched", "connect4");
+
+  revalidatePath(`/play/connect4/${roomId}`);
+  return { ok: true };
+}

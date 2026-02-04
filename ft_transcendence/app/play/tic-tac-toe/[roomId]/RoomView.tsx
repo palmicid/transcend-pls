@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { leaveLobbyRoom } from "@/app/play/actions";
-import { submitTicTacToeMove, startTicTacToeGame, setBotForSlot, removeBotFromSlot } from "../actions";
+import { submitTicTacToeMove, startTicTacToeGame, setBotForSlot, removeBotFromSlot, switchToSlot } from "../actions";
 import useGameSSE from "@/hooks/useGameSSE";
 import GameRoomShell from "@/components/game/room/GameRoomShell";
 import PlayerSlotCard from "@/components/game/room/PlayerSlotCard";
@@ -17,6 +17,7 @@ import {
   createStartHandler,
   createMoveHandler,
   createBotHandlers,
+  createSwitchHandler,
 } from "@/components/game/room/roomViewUtils";
 import { X, Circle, Play } from "lucide-react";
 
@@ -92,6 +93,12 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     onError: console.error,
   });
 
+  const handleSwitch = createSwitchHandler<"X" | "O">({
+    roomId,
+    switchFn: switchToSlot,
+    onError: console.error,
+  });
+
   // Status message
   const status = getRoomStatusMessage({
     isConnected,
@@ -128,6 +135,8 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
             player={playerX}
             isCurrentTurn={isGameInProgress && currentTurn === "X"}
             isMe={isMe("X")}
+            onSwitchHere={() => handleSwitch("X")}
+            isGameInProgress={isGameInProgress}
             colorClasses={{
               bg: "bg-cyan-500/10",
               border: "border-cyan-500/30",
@@ -152,6 +161,8 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
             player={playerO}
             isCurrentTurn={isGameInProgress && currentTurn === "O"}
             isMe={isMe("O")}
+            onSwitchHere={() => handleSwitch("O")}
+            isGameInProgress={isGameInProgress}
             colorClasses={{
               bg: "bg-fuchsia-500/10",
               border: "border-fuchsia-500/30",

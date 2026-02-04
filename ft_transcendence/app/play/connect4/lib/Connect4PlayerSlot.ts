@@ -72,6 +72,28 @@ export default class Connect4PlayerSlot implements PlayerSlot {
   }
 
   /**
+   * Switch a player to a specific role.
+   * Only allowed if the target slot is completely empty (no human or bot).
+   *
+   * @param playerId - The user ID to switch
+   * @param targetRole - The role to switch to
+   * @returns True if switch successful, false otherwise
+   */
+  switchTo(playerId: string, targetRole: PlayerColor): boolean {
+    const currentRole = this.getRole(playerId);
+    if (!currentRole || currentRole === targetRole) return false;
+
+    // Check if target slot is empty (Option B: bots block switching)
+    if (this.roles[targetRole] !== null) return false;
+
+    // Move player
+    this.roles[currentRole] = null;
+    this.roles[targetRole] = playerId;
+
+    return true;
+  }
+
+  /**
    * Remove a player from their slot.
    *
    * @param playerId - The player to remove
