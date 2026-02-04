@@ -5,22 +5,22 @@ import {
   listLobbyRooms,
   deleteLobbyRoom
 } from "@/app/play/actions";
-import { createTicTacToeRoom } from "./actions";
+import { createConnect4Room } from "./actions";
 
 export default function LobbyContent({ userId }: { userId: string }) {
   return (
     <GameLobby
-      gameId="tic-tac-toe"
+      gameId="connect4"
       userId={userId}
       actions={{
-        listRooms: () => listLobbyRooms("tic-tac-toe"),
-        createRoom: createTicTacToeRoom,
+        listRooms: () => listLobbyRooms("connect4"),
+        createRoom: createConnect4Room,
         deleteRoom: deleteLobbyRoom,
       }}
       metadata={{
-        name: "Tic-Tac-Toe",
-        description: "Classic 3x3 grid game. Get 3 in a row to win!",
-        urlSlug: "tic-tac-toe"
+        name: "Connect 4",
+        description: "Drop discs to connect 4 in any direction!",
+        urlSlug: "connect4"
       }}
     />
   );

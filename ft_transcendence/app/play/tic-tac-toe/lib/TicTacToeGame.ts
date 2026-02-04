@@ -151,8 +151,12 @@ export default class TicTacToeGame extends Game<
   // GAME STATE
   // ===========================================================================
 
-  loadState(): void {
-    this.gameState = new TicTacToeState();
+  loadState(data?: any): void {
+    if (data) {
+      this.restoreState(data);
+    } else {
+      this.gameState = new TicTacToeState();
+    }
   }
 
   /**
@@ -172,6 +176,15 @@ export default class TicTacToeGame extends Game<
     // Infer winner if game is ended
     if (data.status === "ENDED" && data.winner_role) {
       this.gameState.winner = data.winner_role;
+    }
+
+    // Restore players
+    if (data.players && Array.isArray(data.players)) {
+      data.players.forEach((p: any) => {
+        if (p.role === "X" || p.role === "O") {
+          this.playerslot.roles[p.role as PlayerRole] = p.user_id.toString();
+        }
+      });
     }
   }
 

@@ -3,16 +3,14 @@ import { requireAuth } from "@/lib/auth/auth-session";
 import { getSession } from "@/lib/auth/auth-session";
 import { getRoomMeta } from "@/app/play/actions";
 import { MainLayout } from "@/components/layout/MainLayout";
-import RoomView, { GameType } from "./RoomView";
+import RoomView from "./RoomView";
 
 type PageProps = {
   params: Promise<{ roomId: string }>;
-  searchParams?: Promise<{ game?: string }>;
 };
 
-export default async function RoomPage({ params, searchParams }: PageProps) {
+export default async function RoomPage({ params }: PageProps) {
   const { roomId } = await params;
-  const resolvedSearch = searchParams ? await searchParams : undefined;
 
   let userId: number;
   try {
@@ -28,22 +26,19 @@ export default async function RoomPage({ params, searchParams }: PageProps) {
 
   const meta = await getRoomMeta(roomId);
   if (!meta) {
-    throw new Error("Room not found");
+    // Or redirect to lobby with error
+    redirect("/play/connect4");
   }
 
-  const requestedGame = resolvedSearch?.game === "tic-tac-toe" ? "tic-tac-toe" : undefined;
-  const resolvedGame: GameType = requestedGame
-    ? requestedGame
-    : meta.game_type === "tic-tac-toe"
-      ? "tic-tac-toe"
-      : "tic-tac-toe";
+  if (meta.game_type !== "connect4") {
+      redirect(`/play/${meta.game_type}/${roomId}`);
+  }
 
   return (
     <MainLayout showNav={true}>
       <RoomView
         roomId={roomId}
         userId={session.userId.toString()}
-        gameType={resolvedGame}
         initialState={meta.status}
       />
     </MainLayout>

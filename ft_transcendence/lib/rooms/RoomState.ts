@@ -94,4 +94,13 @@ export default class RoomState {
     }
     return false;
   }
+  /**
+   * Force transition to a new state (ignoring validation).
+   * Used for restoring state from persistence.
+   *
+   * @param newState - The state to set
+   */
+  forceTransition(newState: State): void {
+    this._state = newState;
+  }
 }

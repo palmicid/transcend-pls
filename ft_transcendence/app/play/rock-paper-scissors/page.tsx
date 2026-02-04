@@ -36,7 +36,7 @@ export default async function RockPaperScissorsPage() {
               </h1>
 
               <p className="mt-4 text-white/70 leading-relaxed">
-                We&apos;re working on bringing you a fast-paced multiplayer Rock-Paper-Scissors experience.
+                We&apos;re working on bringing you a fast-paced multiplayer Connect4 experience.
                 Challenge your friends and settle debates in style!
               </p>
 

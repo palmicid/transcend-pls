@@ -62,7 +62,7 @@ export default async function PlayPage() {
 
         {/* Rock Paper Scissors */}
         <Link
-          href="/play/rock-paper-scissors"
+            href="/play/connect4"
           className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:p-6 hover:bg-black/20 transition block hover:text-emerald-400"
         >
           <div className="flex items-start justify-between gap-3">

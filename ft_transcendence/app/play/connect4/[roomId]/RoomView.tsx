@@ -3,24 +3,21 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { leaveLobbyRoom } from "@/app/play/actions";
-import { submitTicTacToeMove, startTicTacToeGame } from "../actions";
+import { submitConnect4Move, startConnect4Game } from "../actions";
 import useGameSSE from "@/hooks/useGameSSE";
 import GameRoomShell from "@/components/game/room/GameRoomShell";
 import PlayerSlotCard from "@/components/game/room/PlayerSlotCard";
-import { X, Circle, Play } from "lucide-react";
-
-export type GameType = "tic-tac-toe";
+import { Play } from "lucide-react";
 
 interface RoomViewProps {
   roomId: string;
   userId: string;
-  gameType: GameType;
   initialState: string | null;
 }
 
-export default function RoomView({ roomId, userId, gameType, initialState }: RoomViewProps) {
+export default function RoomView({ roomId, userId, initialState }: RoomViewProps) {
   const router = useRouter();
-  const sseUrl = `/play/tic-tac-toe/sse/${roomId}`;
+  const sseUrl = `/play/connect4/sse/${roomId}`;
   const { snapshot, isConnected, myRole, error: connectionError } = useGameSSE(
     roomId,
     sseUrl,
@@ -29,8 +26,8 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
 
   // Derive state from snapshot
   const roomStatus = snapshot?.status || initialState || "OPEN";
-  const board = (snapshot?.board as (string | null)[]) || Array(9).fill(null);
-  const currentTurn = snapshot?.currentTurn || "X";
+  const board = (snapshot?.board as (string | null)[][]) || Array(6).fill(null).map(() => Array(7).fill(null));
+  const currentTurn = snapshot?.currentTurn || "Red";
   const winner = snapshot?.winner || null;
   const isDraw = snapshot?.isDraw || false;
   const players = snapshot?.players || [];
@@ -44,23 +41,23 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
 
   // Helpers
   const getPlayerByRole = (role: string) => players.find((p) => p.role === role);
-  const playerX = getPlayerByRole("X");
-  const playerO = getPlayerByRole("O");
+  const playerRed = getPlayerByRole("Red");
+  const playerYellow = getPlayerByRole("Yellow");
   const isMe = (role: string) => myRole === role;
 
   const handleLeave = useCallback(async () => {
     await leaveLobbyRoom(roomId, userId);
-    router.push("/play/tic-tac-toe");
+    router.push("/play/connect4");
   }, [roomId, userId, router]);
 
   const handleStart = useCallback(async () => {
-    await startTicTacToeGame(roomId);
+    await startConnect4Game(roomId);
   }, [roomId]);
 
   const handleMove = useCallback(
-    async (cell: number) => {
+    async (colIndex: number) => {
       if (!canClickBoard) return;
-      await submitTicTacToeMove(roomId, userId, cell);
+      await submitConnect4Move(roomId, userId, colIndex);
     },
     [roomId, userId, canClickBoard]
   );
@@ -78,7 +75,7 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     if (isDraw) return { text: "🤝 It's a Draw!", color: "text-amber-300" };
     if (isGameInProgress) {
       return isMyTurn
-        ? { text: "🎯 Your turn — make a move!", color: "text-emerald-300" }
+        ? { text: "🎯 Your turn — click a column!", color: "text-emerald-300" }
         : { text: "⏳ Opponent's turn...", color: "text-white/60" };
     }
     if (canStartGame) return { text: "✓ Both players ready! Click Start.", color: "text-emerald-300" };
@@ -90,7 +87,7 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
   return (
     <GameRoomShell
       roomId={roomId}
-      gameType="tic-tac-toe"
+      gameType="connect4"
       isConnected={isConnected}
       myRole={myRole}
       onLeave={handleLeave}
@@ -100,27 +97,27 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
         {/* Player Slots */}
         <div className="grid grid-cols-2 gap-4">
           <PlayerSlotCard
-            role="X"
-            roleIcon={<X className="h-5 w-5 text-cyan-400" />}
-            player={playerX}
-            isCurrentTurn={isGameInProgress && currentTurn === "X"}
-            isMe={isMe("X")}
+            role="Red"
+            roleIcon={<div className="h-4 w-4 rounded-full bg-red-500" />}
+            player={playerRed}
+            isCurrentTurn={isGameInProgress && currentTurn === "Red"}
+            isMe={isMe("Red")}
             colorClasses={{
-              bg: "bg-cyan-500/10",
-              border: "border-cyan-500/30",
-              text: "text-cyan-400",
+              bg: "bg-red-500/10",
+              border: "border-red-500/30",
+              text: "text-red-400",
             }}
           />
           <PlayerSlotCard
-            role="O"
-            roleIcon={<Circle className="h-5 w-5 text-fuchsia-400" />}
-            player={playerO}
-            isCurrentTurn={isGameInProgress && currentTurn === "O"}
-            isMe={isMe("O")}
+            role="Yellow"
+            roleIcon={<div className="h-4 w-4 rounded-full bg-yellow-400" />}
+            player={playerYellow}
+            isCurrentTurn={isGameInProgress && currentTurn === "Yellow"}
+            isMe={isMe("Yellow")}
             colorClasses={{
-              bg: "bg-fuchsia-500/10",
-              border: "border-fuchsia-500/30",
-              text: "text-fuchsia-400",
+              bg: "bg-yellow-500/10",
+              border: "border-yellow-500/30",
+              text: "text-yellow-400",
             }}
           />
         </div>
@@ -131,33 +128,40 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
         </div>
 
         {/* Game Board */}
-        <div className="grid grid-cols-3 gap-3 w-64 mx-auto">
-          {board.map((cell, idx) => {
-            const isCellDisabled = !canClickBoard || cell !== null;
-            return (
-              <button
-                key={idx}
-                onClick={() => handleMove(idx)}
-                disabled={isCellDisabled}
-                className={`
-                  aspect-square rounded-2xl border-2 text-3xl font-bold transition-all duration-200
-                  flex items-center justify-center
-                  ${
-                    cell === "X"
-                      ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400"
-                      : cell === "O"
-                      ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-400"
-                      : canClickBoard
-                      ? "border-white/10 bg-white/[0.02] hover:bg-white/[0.08] hover:border-white/20 cursor-pointer"
-                      : "border-white/5 bg-white/[0.01] cursor-not-allowed opacity-50"
-                  }
-                `}
-              >
-                {cell === "X" && <X className="h-8 w-8" />}
-                {cell === "O" && <Circle className="h-7 w-7" />}
-              </button>
-            );
-          })}
+        <div className="bg-blue-600 p-4 rounded-xl shadow-2xl relative">
+          <div className="grid grid-cols-7 gap-2 md:gap-3">
+             {/* Columns */}
+             {Array.from({ length: 7 }).map((_, colIndex) => {
+               const isColumnFull = board[0][colIndex] !== null;
+               const isClickable = canClickBoard && !isColumnFull;
+
+               return (
+                 <div
+                   key={colIndex}
+                   className={`
+                      flex flex-col gap-2 md:gap-3 rounded-lg p-1 transition-colors
+                      ${isClickable ? "cursor-pointer hover:bg-white/10" : "cursor-default"}
+                   `}
+                   onClick={() => handleMove(colIndex)}
+                 >
+                    {/* Rows */}
+                    {Array.from({ length: 6 }).map((_, rowIndex) => {
+                        const cell = board[rowIndex][colIndex];
+                        return (
+                            <div
+                              key={rowIndex}
+                              className={`
+                                  aspect-square rounded-full border-4 border-blue-700 shadow-inner
+                                  ${cell === 'Red' ? 'bg-red-500' :
+                                    cell === 'Yellow' ? 'bg-yellow-400' : 'bg-[#1e3a8a]'}
+                              `}
+                            />
+                        );
+                    })}
+                 </div>
+               );
+             })}
+          </div>
         </div>
 
         {/* Start Button */}

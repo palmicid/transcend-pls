@@ -19,7 +19,7 @@ function PolicyModal({
     if (kind === "terms") {
       return [
         { h: "1) Acceptance of Terms", p: "By using 42 TranscenDEAD ☠️ (the “Service”), you agree to these Terms & Conditions. If you don’t agree, please stop using the Service." },
-        { h: "2) What this Service is", p: "This project provides a simple platform for users to log in, view a profile, chat, manage friends, and play mini games (e.g., Tic-Tac-Toe, Rock-Paper-Scissors). Some features may be mock/demo features for development and testing." },
+        { h: "2) What this Service is", p: "This project provides a simple platform for users to log in, view a profile, chat, manage friends, and play mini games (e.g., Tic-Tac-Toe, Connect4). Some features may be mock/demo features for development and testing." },
         { h: "3) Accounts & Access", p: "You are responsible for keeping your account credentials safe. If you believe your account is compromised, stop using the Service and contact the maintainer/admin." },
         { h: "4) Acceptable Use", p: "Do not abuse the Service. This includes: spamming, harassment, hate speech, cheating/exploiting bugs, reverse engineering in harmful ways, or attempting unauthorized access to other users’ data." },
         { h: "5) Content in Chat", p: "You are responsible for any messages you send. Please be respectful. The Service may remove content or restrict access if it violates these Terms." },

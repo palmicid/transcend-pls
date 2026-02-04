@@ -66,9 +66,9 @@ export function FeatureGrid() {
 
       {/* Rock Paper Scissors */}
       <FeatureCard
-        title="Rock–Paper–Scissors"
+        title="Connect4"
         desc="Fast rounds to settle any debate. Best of 3?"
-        href="/play/rock-paper-scissors"
+        href="/play/connect4"
         badge="Game"
 		color="emerald"
         icon={
