@@ -10,6 +10,7 @@ import { getSession } from "@/lib/auth/auth-session";
 import { roomManager, loadAndValidateRoom, Room } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import { GameRegistry } from "@/lib/game/GameRegistry";
+import { saveGameResult } from "@/lib/game/saveGameResult";
 
 // =============================================================================
 // SYNC UTILITIES
@@ -119,6 +120,9 @@ export async function createGameRoom(gameId: string): Promise<{ ok: boolean; roo
   const gameDef = GameRegistry.get(gameId);
   if (!gameDef) return { ok: false, error: "Unknown game type" };
 
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user) return { ok: false, error: "User not found" };
+
   try {
     const roomId = `room-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -197,6 +201,23 @@ export async function submitGameMove(
       const newBoard = gameDef.parseBoard(newSnapshot.board);
       const winner = gameDef.checkWin(newBoard);
       const isDraw = gameDef.checkDraw(newBoard, winner);
+
+      // Save game result if game ended
+      if (winner || isDraw) {
+        const roomPlayers = await prisma.roomPlayer.findMany({
+          where: { room_id: roomId },
+          select: { user_id: true, role: true },
+        });
+
+        await saveGameResult({
+          gameType: gameId,
+          roomId,
+          players: roomPlayers.map((p) => ({ id: p.user_id, role: p.role })),
+          winnerRole: winner,
+          isDraw,
+          startedAt: dbRoom.created_at,
+        });
+      }
 
       // Update DB with winner/draw status
       await prisma.room.update({

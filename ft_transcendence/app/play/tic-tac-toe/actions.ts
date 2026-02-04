@@ -237,6 +237,11 @@ export async function createTicTacToeRoom(roomId?: string, ownerId?: string) {
     return { ok: false, error: "Unauthorized" };
   }
 
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user) {
+    return { ok: false, error: "User not found" };
+  }
+
   try {
     // Generate roomId if not provided
     const generatedRoomId = roomId || `room-${Math.random().toString(36).substring(2, 9)}`;

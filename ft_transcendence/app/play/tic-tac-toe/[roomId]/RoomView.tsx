@@ -240,3 +240,4 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     </GameRoomShell>
   );
 }
+

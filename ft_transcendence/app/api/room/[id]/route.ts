@@ -12,7 +12,8 @@ import { getSession } from "@/lib/auth/auth-session";
 import { generateSSEToken } from "@/lib/auth/sse-token";
 import { roomManager } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
-import TicTacToeGame from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
+import { GameRegistry } from "@/lib/game/GameRegistry";
+import { getTotalPlayerCount } from "@/lib/bot/botHelpers";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -56,12 +57,29 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     // Add player if not already in
     let playerRole: string | null = null;
+    const gameDef = GameRegistry.get(room.game_type);
     if (!existingPlayer) {
-      if (room.game_type === "tic-tac-toe") {
-        const hasX = room.players.some((p: { role: string | null }) => p.role === "X");
-        playerRole = hasX ? "O" : "X";
-      } else {
-        playerRole = `player${room.players.length + 1}`;
+      if (!gameDef) {
+        return NextResponse.json({ error: "Unknown game type" }, { status: 400 });
+      }
+
+      const currentPlayers = getTotalPlayerCount(
+        room.players.length,
+        room.bot_role,
+        room.bot_difficulty
+      );
+      if (currentPlayers >= room.max_players) {
+        return NextResponse.json({ error: "Room is full" }, { status: 403 });
+      }
+
+      const takenRoles = new Set(room.players.map((p: { role: string | null }) => p.role));
+      if (room.bot_role && room.bot_difficulty) {
+        takenRoles.add(room.bot_role);
+      }
+
+      playerRole = gameDef.roles.find((role) => !takenRoles.has(role)) ?? null;
+      if (!playerRole) {
+        return NextResponse.json({ error: "No available role" }, { status: 409 });
       }
 
       await prisma.roomPlayer.create({
@@ -73,7 +91,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
       });
 
       // Update room status if now ready
-      if (room.players.length + 1 >= room.max_players) {
+      const totalPlayers = getTotalPlayerCount(
+        room.players.length + 1,
+        room.bot_role,
+        room.bot_difficulty
+      );
+      if (totalPlayers >= room.max_players) {
         await prisma.room.update({
           where: { id: roomId },
           data: { status: "READY" },
@@ -86,28 +109,43 @@ export async function GET(req: NextRequest, context: RouteContext) {
     // Sync with in-memory room manager for SSE
     const inMemoryRoom = roomManager.ensureRoom(roomId, broadcaster);
     if (!inMemoryRoom.gameType) {
-      const game = new TicTacToeGame();
-      game.init();
-      roomManager.attachGame(roomId, game, broadcaster, room.owner_id.toString());
+      const gameDef = GameRegistry.get(room.game_type);
+      if (gameDef) {
+        const game = gameDef.createGame();
+        game.init();
+        roomManager.attachGame(roomId, game, broadcaster, room.owner_id.toString());
+      }
     }
     roomManager.addPlayer(roomId, session.userId.toString());
 
     // Generate SSE token
     const sseToken = await generateSSEToken(room.id, session.userId);
 
+    const updatedRoom = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        players: true,
+        owner: {
+          select: { id: true, display_name: true },
+        },
+      },
+    });
+
     return NextResponse.json({
       room: {
-        id: room.id,
-        name: room.name,
-        game_type: room.game_type,
-        status: room.status,
-        owner: room.owner,
-        players: room.players.map((p: { user_id: number; role: string | null }) => ({
-          user_id: p.user_id,
-          role: p.role,
-        })),
-        board_state: room.board_state,
-        current_turn: room.current_turn,
+        id: updatedRoom?.id ?? room.id,
+        name: (updatedRoom as any)?.name ?? (room as any).name,
+        game_type: updatedRoom?.game_type ?? room.game_type,
+        status: updatedRoom?.status ?? room.status,
+        owner: updatedRoom?.owner ?? room.owner,
+        players: (updatedRoom?.players ?? room.players).map(
+          (p: { user_id: number; role: string | null }) => ({
+            user_id: p.user_id,
+            role: p.role,
+          })
+        ),
+        board_state: updatedRoom?.board_state ?? room.board_state,
+        current_turn: updatedRoom?.current_turn ?? room.current_turn,
       },
       myRole: playerRole,
       sseToken,
