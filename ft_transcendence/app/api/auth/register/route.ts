@@ -40,7 +40,7 @@ export async function POST(req: Request) {
             },
         });
 
-        await setUserId(String(newUser.id));
+        await setUserId(newUser.id);
 
         newUser.display_name = `Player${newUser.id}`;
         await prisma.user.update({

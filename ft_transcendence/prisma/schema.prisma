@@ -24,6 +24,7 @@ model User {
   updated_at    DateTime @updatedAt
   secret        String   @default("")
   is_verified   Boolean  @default(false)
+  use2FA        Boolean  @default(true)
 
   // Google Auth Relation
   googleAuth oauth[]
@@ -100,17 +101,23 @@ model oauth {
 
 // Room Model for game lobbies
 model Room {
-  id           String   @id
+  id           String  @id
   owner_id     Int
-  owner        User     @relation("RoomOwner", fields: [owner_id], references: [id])
-  game_type    String   @default("tic-tac-toe")
-  status       String   @default("OPEN") // OPEN, READY, IN_GAME, ENDED
-  max_players  Int      @default(2)
-  board_state  Json?    @default("[]")
+  owner        User    @relation("RoomOwner", fields: [owner_id], references: [id])
+  game_type    String  @default("tic-tac-toe")
+  status       String  @default("OPEN") // OPEN, READY, IN_GAME, ENDED
+  max_players  Int     @default(2)
+  board_state  Json?   @default("[]")
   current_turn String?
   winner_role  String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+
+  // Bot configuration
+  bot_difficulty Int? // null = no bot, 1 = Easy, 3 = Medium, 9 = Hard
+  bot_role       String? // "X" or "O" - which slot the bot occupies
+  bot_delay_ms   Int     @default(500) // Delay before bot moves (ms)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   // Relations
   players RoomPlayer[]

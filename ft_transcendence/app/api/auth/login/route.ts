@@ -3,29 +3,39 @@ import prisma from "@/lib/prisma";
 // import { setUserId } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { setUserId } from "@/lib/auth/auth-session";
+import { SignJWT } from "jose";
+
+const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET!);
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const email = body?.email?.trim();
-  const password = body?.password;
+  try {
+    const { email, password } = await req.json();
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
 
-  if (!email || !password) {
-    return NextResponse.json({ ok: false, message: "Missing email/password" }, { status: 400 });
+    //cx if user exits and password match
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
+    const response = NextResponse.json({
+      ok: true,
+      success: true,
+      message: 'Logged in successfully',
+    });
+
+    await setUserId(user.id);
+
+    return response;
+
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return NextResponse.json({ ok: false, message: "Invalid credentials" }, { status: 401 });
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return NextResponse.json({ ok: false, message: "Invalid credentials" }, { status: 401 });
-  }
-
-  await setUserId(user.id);
-  return NextResponse.json({
-    ok: true,
-    user: { id: user.id, email: user.email, display_name: user.display_name },
-  });
 }

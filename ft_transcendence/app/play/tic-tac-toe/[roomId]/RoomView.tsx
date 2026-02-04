@@ -34,11 +34,20 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
   const winner = snapshot?.winner || null;
   const isDraw = snapshot?.isDraw || false;
   const players = snapshot?.players || [];
+  const botConfig = snapshot?.bot || null;
 
   // Game state helpers
   const isGameInProgress = roomStatus === "IN_GAME";
   const isGameEnded = roomStatus === "ENDED" || !!winner || isDraw;
-  const canStartGame = roomStatus === "READY" && players.length >= 2;
+  const isLobby = roomStatus === "OPEN" || roomStatus === "READY";
+
+  // With bot, we can start with 1 human + 1 bot
+  const hasBot = !!botConfig;
+  const humanPlayerCount = players.filter((p) => !p.isBot).length;
+  const canStartGame =
+    (roomStatus === "READY" || roomStatus === "OPEN") &&
+    ((hasBot && humanPlayerCount >= 1) || players.length >= 2);
+
   const isMyTurn = isGameInProgress && myRole === currentTurn;
   const canClickBoard = isGameInProgress && isMyTurn && !winner && !isDraw;
 
@@ -70,19 +79,35 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
     if (!isConnected) return { text: "Connecting...", color: "text-white/50" };
     if (winner) {
       const didIWin = winner === myRole;
-      return {
-        text: didIWin ? "🎉 You Win!" : `😔 ${winner} Wins`,
-        color: didIWin ? "text-emerald-300" : "text-red-300",
-      };
+      const botWon = botConfig?.role === winner;
+      if (didIWin) {
+        return { text: "🎉 You Win!", color: "text-emerald-300" };
+      } else if (botWon) {
+        return { text: "🤖 Bot Wins!", color: "text-cyan-300" };
+      } else {
+        return { text: `😔 ${winner} Wins`, color: "text-red-300" };
+      }
     }
     if (isDraw) return { text: "🤝 It's a Draw!", color: "text-amber-300" };
     if (isGameInProgress) {
-      return isMyTurn
-        ? { text: "🎯 Your turn — make a move!", color: "text-emerald-300" }
-        : { text: "⏳ Opponent's turn...", color: "text-white/60" };
+      const isBotTurn = botConfig?.role === currentTurn;
+      if (isMyTurn) {
+        return { text: "🎯 Your turn — make a move!", color: "text-emerald-300" };
+      } else if (isBotTurn) {
+        return { text: "🤖 Bot is thinking...", color: "text-cyan-300" };
+      } else {
+        return { text: "⏳ Opponent's turn...", color: "text-white/60" };
+      }
     }
-    if (canStartGame) return { text: "✓ Both players ready! Click Start.", color: "text-emerald-300" };
-    return { text: `Waiting for players (${players.length}/2)`, color: "text-white/50" };
+    if (canStartGame) {
+      return { text: "✓ Ready to play! Click Start.", color: "text-emerald-300" };
+    }
+    return {
+      text: hasBot
+        ? `Waiting for you to join (${humanPlayerCount}/1)`
+        : `Waiting for players (${players.length}/2)`,
+      color: "text-white/50",
+    };
   };
 
   const status = getStatusMessage();

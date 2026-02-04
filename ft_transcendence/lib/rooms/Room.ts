@@ -44,7 +44,7 @@ export default class Room {
   private broadcaster: Broadcaster | null;
 
   /** The game instance (null until attached) */
-  private game: Game<GameConfig, GameState, PlayerSlot> | null;
+  private _game: Game<GameConfig, GameState, PlayerSlot> | null;
 
   /** Room lifecycle state machine */
   private state: RoomState;
@@ -67,7 +67,7 @@ export default class Room {
     this.id = id;
     this.broadcaster = broadcaster;
     this.state = new RoomState();
-    this.game = null;
+    this._game = null;
     this.ownerId = ownerId;
   }
 
@@ -92,15 +92,23 @@ export default class Room {
 
   /** Get the game type if a game is attached */
   get gameType(): string | null {
-    return this.game?.type ?? null;
+    return this._game?.type ?? null;
   }
 
   /** Get the number of players currently in the room */
   get playerCount(): number {
-    if (!this.game) return 0;
-    const snapshot = this.game.Snapshot as { players?: Record<string, string | null> } | null;
+    if (!this._game) return 0;
+    const snapshot = this._game.Snapshot as { players?: Record<string, string | null> } | null;
     if (!snapshot?.players) return 0;
     return Object.values(snapshot.players).filter((p) => p !== null).length;
+  }
+
+  /**
+   * Get the attached game instance.
+   * Exposed for external access (e.g., server actions configuring bot).
+   */
+  get game(): Game<GameConfig, GameState, PlayerSlot> | null {
+    return this._game;
   }
 
   // ===========================================================================
@@ -240,14 +248,35 @@ export default class Room {
    * Start the game.
    *
    * Transitions from READY to IN_GAME state and starts the game loop.
+   * If the game is ready (e.g., bot games with 1 human) but still in OPEN
+   * state, automatically transitions to READY first.
    *
    * @returns true if the game was started successfully
    */
   start(): boolean {
-    if (!this.game) return false;
-    if (!this.state.transitionTo(State.IN_GAME)) return false;
+    if (!this._game) {
+      return false;
+    }
 
-    this.game.startGame();
+    // Check if game is ready (handles bot games properly)
+    if (!this._game.isReady2Start) {
+      return false;
+    }
+
+    // If game is ready but still in OPEN state, transition to READY first
+    // This handles bot games where configureBot() was called without addPlayer()
+    if (this.state.current === State.OPEN) {
+      if (!this.state.transitionTo(State.READY)) {
+        return false;
+      }
+    }
+
+    // Now transition from READY to IN_GAME
+    if (!this.state.transitionTo(State.IN_GAME)) {
+      return false;
+    }
+
+    this._game.startGame();
     this.broadcastSnapshot();
     return true;
   }

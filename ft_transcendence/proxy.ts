@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth/auth-session';
+import path from 'path';
 
 export const config = {
   matcher: [
@@ -12,7 +13,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
     const session = await getSession();
     if (!session) {
-        if (pathname === '/login' || pathname === '/')
+        if (pathname === '/login' || pathname === '/' || pathname ==='/register')
             return NextResponse.next();
         return NextResponse.redirect(new URL('/login', request.url));
     }

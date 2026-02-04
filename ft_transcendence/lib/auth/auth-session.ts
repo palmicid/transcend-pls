@@ -39,7 +39,7 @@ export async function getSession(): Promise< UserSession | null > {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return {
-      userId: payload.user_id as number,
+      userId: (payload.user_id || payload.userId) as number,
       verify2FA: payload.final_2fa as boolean
     };
   } catch (error) {
