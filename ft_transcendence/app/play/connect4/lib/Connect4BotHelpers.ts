@@ -1,11 +1,6 @@
 /**
- * @file BotHelpers.ts
- * @description Centralized bot-related utilities for Tic-Tac-Toe
- *
- * Provides helper functions for:
- * - Bot configuration validation
- * - Bot player counting
- * - Bot move callbacks
+ * @file Connect4BotHelpers.ts
+ * @description Centralized bot-related utilities for Connect 4, mirroring TTT helpers.
  */
 
 import {
@@ -19,20 +14,17 @@ import {
 } from "@/lib/bot/botHelpers";
 
 /**
- * Check if a room has a fully configured bot (both role and difficulty set).
- * This is the source of truth for "hasBot" semantics.
+ * Check if a room has a fully configured bot.
  */
 export { isBotConfigured };
 
 /**
  * Count total players in a room including the bot if configured.
- * Use this for capacity checks and room status transitions.
  */
 export { getTotalPlayerCount };
 
 /**
  * Create a standardized bot move callback for syncing and broadcasting.
- * Handles end-of-game transitions automatically.
  */
 export { createBotMoveCallback };
 
@@ -43,10 +35,9 @@ export { getBotDifficultyLabel };
 
 /**
  * Validate bot configuration options.
- * Throws an error if configuration is invalid.
  */
 export function validateBotConfig(role: string, difficulty: number): void {
-  validateSharedBotConfig(role, difficulty, ["X", "O"]);
+  validateSharedBotConfig(role, difficulty, ["Red", "Yellow"]);
 }
 
 /**

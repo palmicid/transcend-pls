@@ -8,6 +8,7 @@
  * - Alternating turns between players
  * - Win detection (4 in a row: horizontal, vertical, diagonal)
  * - Draw detection (full board, no winner)
+ * - Bot opponent support with configurable difficulty
  *
  * @example
  * ```ts
@@ -16,10 +17,10 @@
  * const game = new Connect4Game();
  * game.init();
  * game.handlePlayerConnect('player-1'); // Gets Red
- * game.handlePlayerConnect('player-2'); // Gets Yellow
+ * game.configureBot('Yellow', 9); // Add hard bot as Yellow
  * game.startGame();
  * game.playerAction('player-1', { column: 3 }); // Red drops in column 3
- * ```
+ * // Bot will respond automatically via scheduleBotMoveIfNeeded()
  */
 
 import { Game } from "@/lib/game";
@@ -27,6 +28,8 @@ import Connect4Config from "./Connect4Config";
 import Connect4State from "./Connect4State";
 import Connect4PlayerSlot, { PlayerColor } from "./Connect4PlayerSlot";
 import logger from "@/lib/logger";
+import { MinimaxStrategy, BOT_PLAYER_ID } from "@/lib/bot";
+import { Connect4MinimaxAdapter } from "./Connect4MinimaxAdapter";
 
 /**
  * Shape of persisted Connect Four state from the database.
@@ -36,6 +39,9 @@ interface Connect4PersistedState {
   current_turn?: PlayerColor;
   status?: string;
   winner_role?: PlayerColor;
+  bot_difficulty?: number | null;
+  bot_role?: PlayerColor | null;
+  bot_delay_ms?: number;
 }
 
 /**
@@ -54,6 +60,22 @@ export default class Connect4Game extends Game<
   gameConfig = new Connect4Config();
 
   // ===========================================================================
+  // BOT MANAGEMENT
+  // ===========================================================================
+
+  /** Pending bot move timeout ID (for cancellation) */
+  private botMoveTimeout: NodeJS.Timeout | null = null;
+
+  /**
+   * Callback to trigger after bot move (for syncing to DB and broadcasting).
+   * Set by the room manager or server actions when integrating the game.
+   */
+  onBotMove: (() => Promise<void>) | null = null;
+
+  /** Strategy instance for bot moves */
+  private botStrategy = new MinimaxStrategy(Connect4MinimaxAdapter);
+
+  // ===========================================================================
   // GAME METADATA
   // ===========================================================================
 
@@ -65,6 +87,11 @@ export default class Connect4Game extends Game<
     this.playerslot = new Connect4PlayerSlot();
     this.gameState = new Connect4State();
     this.gameConfig = new Connect4Config();
+
+    // If config has a bot, assign it to the slot
+    if (this.gameConfig.botRole) {
+      this.playerslot.assignBot(this.gameConfig.botRole as PlayerColor);
+    }
   }
 
   // ===========================================================================
@@ -96,21 +123,123 @@ export default class Connect4Game extends Game<
   }
 
   // ===========================================================================
-  // ACTION VALIDATION
+  // BOT CONFIGURATION
   // ===========================================================================
 
   /**
-   * Validate a player's move before processing.
+   * Configure the bot. Can be called to add/remove bot mid-game.
    *
-   * Checks:
-   * - It's the correct player's turn
-   * - Column index is valid (0-6)
-   * - Column is not full
-   *
-   * @param playerId - The player attempting the move
-   * @param action - The move action with column index
-   * @returns true if move is valid
+   * @param role - The role for the bot ("Red" or "Yellow"), or null to remove bot
+   * @param difficulty - Search depth (1=Easy, 3=Medium, 9=Hard)
+   * @param delayMs - Delay before bot moves (milliseconds)
    */
+  configureBot(
+    role: PlayerColor | null,
+    difficulty: 1 | 3 | 9 | null = 3,
+    delayMs: number = 500
+  ): void {
+    // Remove existing bot if any
+    const existingBotRole = this.playerslot.getBotRole();
+    if (existingBotRole) {
+      this.playerslot.removeBot(existingBotRole);
+    }
+
+    // Clear any pending bot move
+    if (this.botMoveTimeout) {
+      clearTimeout(this.botMoveTimeout);
+      this.botMoveTimeout = null;
+    }
+
+    // Set new config
+    this.gameConfig.botRole = role;
+    this.gameConfig.botDifficulty = difficulty ?? 3;
+    this.gameConfig.botDelayMs = delayMs;
+
+    // Assign bot to slot if enabled
+    if (role) {
+      this.playerslot.assignBot(role);
+    }
+
+    logger.info({
+      msg: "C4 Bot configured",
+      gameType: this.type,
+      botRole: role,
+      difficulty,
+      delayMs,
+    });
+  }
+
+  /**
+   * Schedule bot move with delay for human-like feel.
+   * Called after human moves or at game start if bot plays first.
+   */
+  scheduleBotMoveIfNeeded(): void {
+    if (!this.gameConfig.hasBot) return;
+
+    const currentRole = this.gameState.currentTurn;
+    // Note: TypeScript might not strictly infer currentTurn as PlayerColor here
+    if (!this.playerslot.isBot(currentRole as PlayerColor)) return;
+    if (this.gameState.winner || this.checkEndConditions()) return;
+
+    // Clear any pending bot move
+    if (this.botMoveTimeout) {
+      clearTimeout(this.botMoveTimeout);
+    }
+
+    // Schedule the move with delay for human-like feel
+    this.botMoveTimeout = setTimeout(async () => {
+      try {
+        this.executeBotMove();
+        if (this.onBotMove) {
+          await this.onBotMove();
+        }
+      } catch (error) {
+        logger.error({
+          msg: "C4 Bot move callback failed",
+          error: error instanceof Error ? error.message : String(error),
+          botRole: this.gameConfig.botRole,
+        });
+      }
+    }, this.gameConfig.botDelayMs);
+  }
+
+  /**
+   * Execute the bot's move immediately.
+   * Called by the timeout after delay.
+   */
+  private executeBotMove(): void {
+    const botRole = this.gameState.currentTurn as PlayerColor;
+    if (!this.playerslot.isBot(botRole)) return;
+
+    // Use the MinimaxStrategy
+    const bestColumn = this.botStrategy.getMove(this.gameState.board, {
+      difficulty: (this.gameConfig.botDifficulty as 1 | 3 | 9) ?? 3,
+      role: botRole,
+      opponentRole: botRole === "Red" ? "Yellow" : "Red",
+      delayMs: 0,
+    });
+
+    if (bestColumn !== null) {
+      // Apply the move (drop piece logic)
+      this.dropPiece(bestColumn, botRole);
+
+      // Switch turns
+      this.gameState.currentTurn = botRole === "Red" ? "Yellow" : "Red";
+      this.updateState(); // Check for winner
+
+      logger.info({
+        msg: "C4 Bot move executed",
+        botRole,
+        column: bestColumn,
+        difficulty: this.gameConfig.botDifficulty,
+      });
+    }
+  }
+
+  // ===========================================================================
+  // ACTION VALIDATION
+  // ===========================================================================
+
   isValidAction(playerId: string, action: unknown): boolean {
     const role = this.playerslot.getRole(playerId);
     if (!role || role !== this.gameState.currentTurn) return false;
@@ -129,15 +258,6 @@ export default class Connect4Game extends Game<
   // PLAYER ACTIONS
   // ===========================================================================
 
-  /**
-   * Process a player's move.
-   *
-   * Drops a piece into the specified column. The piece falls to the lowest
-   * available row due to gravity. Then switches turns to the other player.
-   *
-   * @param playerId - The player making the move
-   * @param action - The move action containing the column
-   */
   playerAction(playerId: string, action: unknown): void {
     const role = this.playerslot.getRole(playerId);
     if (!role) return;
@@ -147,22 +267,34 @@ export default class Connect4Game extends Game<
     // Validate move
     if (!this.isValidAction(playerId, action)) return;
 
+    // Apply move
+    this.dropPiece(move.column, role);
+
+    // Switch turns
+    this.gameState.currentTurn = this.gameState.currentTurn === "Red" ? "Yellow" : "Red";
+    this.updateState(); // Check for winner
+
+    // Trigger bot if it's now its turn
+    this.scheduleBotMoveIfNeeded();
+  }
+
+  /**
+   * Helper to drop a piece into a column with gravity.
+   */
+  private dropPiece(column: number, role: PlayerColor): void {
     // Find the lowest empty row in the column (gravity effect)
     let dropRow = -1;
     for (let row = this.gameConfig.rows - 1; row >= 0; row--) {
-      if (this.gameState.board[row][move.column] === null) {
+      if (this.gameState.board[row][column] === null) {
         dropRow = row;
         break;
       }
     }
 
-    if (dropRow === -1) return; // Column is full (shouldn't happen if validation works)
+    if (dropRow === -1) return; // Column is full
 
     // Place the piece
-    this.gameState.board[dropRow][move.column] = role;
-
-    // Switch turns
-    this.gameState.currentTurn = this.gameState.currentTurn === "Red" ? "Yellow" : "Red";
+    this.gameState.board[dropRow][column] = role;
   }
 
   // ===========================================================================
@@ -176,10 +308,19 @@ export default class Connect4Game extends Game<
         if (data.current_turn) this.gameState.currentTurn = data.current_turn;
         if (data.status === "ENDED" && data.winner_role) this.gameState.winner = data.winner_role;
 
-        // Restore players
+        // Restore bot config from DB state
+        if (data.bot_role) {
+          this.gameConfig.botRole = data.bot_role;
+          this.gameConfig.botDifficulty = data.bot_difficulty;
+          this.gameConfig.botDelayMs = data.bot_delay_ms ?? 500;
+
+          this.playerslot.assignBot(data.bot_role);
+        }
+
+        // Restore players (careful not to overwrite bot if already set)
         if (data.players && Array.isArray(data.players)) {
             data.players.forEach((p: any) => {
-                if (p.role === "Red" || p.role === "Yellow") {
+                if ((p.role === "Red" || p.role === "Yellow") && !this.playerslot.isBot(p.role)) {
                     this.playerslot.roles[p.role as PlayerColor] = p.user_id.toString();
                 }
             });
@@ -187,28 +328,23 @@ export default class Connect4Game extends Game<
     }
   }
 
-  /**
-   * Restore game state from persistent storage.
-   *
-   * @param data - The raw state data from the database
-   */
   restoreState(data: Connect4PersistedState): void {
     if (!data) return;
 
-    if (data.board_state) {
-      this.gameState.board = data.board_state;
-    }
-    if (data.current_turn) {
-      this.gameState.currentTurn = data.current_turn;
-    }
-    if (data.status === "ENDED" && data.winner_role) {
-      this.gameState.winner = data.winner_role;
+    if (data.board_state) this.gameState.board = data.board_state;
+    if (data.current_turn) this.gameState.currentTurn = data.current_turn;
+    if (data.status === "ENDED" && data.winner_role) this.gameState.winner = data.winner_role;
+
+    // Restore bot config
+    if (data.bot_role && data.bot_difficulty) {
+      this.configureBot(
+        data.bot_role as PlayerColor,
+        data.bot_difficulty as 1 | 3 | 9,
+        data.bot_delay_ms ?? 500
+      );
     }
   }
 
-  /**
-   * Update state after a move - check for winner.
-   */
   updateState(): void {
     const winner = this.checkWinner();
     if (winner) {
@@ -216,14 +352,12 @@ export default class Connect4Game extends Game<
     }
   }
 
-  /**
-   * Get the current game snapshot for client display.
-   */
   get Snapshot(): unknown {
     const isFull = this.gameState.board.every((row) =>
       row.every((cell) => cell !== null)
     );
     const isDraw = isFull && this.gameState.winner === null;
+    const botRole = this.playerslot.getBotRole();
 
     return {
       board: this.gameState.board,
@@ -231,6 +365,14 @@ export default class Connect4Game extends Game<
       winner: this.gameState.winner,
       is_draw: isDraw,
       players: this.playerslot.roles,
+      // Bot configuration for frontend
+      bot: this.gameConfig.hasBot
+        ? {
+            role: botRole,
+            difficulty: this.gameConfig.botDifficulty,
+            delayMs: this.gameConfig.botDelayMs,
+          }
+        : null,
     };
   }
 
@@ -247,11 +389,20 @@ export default class Connect4Game extends Game<
   // ===========================================================================
 
   get isReady2Start(): boolean {
+    if (this.gameConfig.hasBot) {
+      // With bot, need 1 human player
+      const humanRole = this.gameConfig.botRole === "Red" ? "Yellow" : "Red";
+      const humanPlayerId = this.playerslot.roles[humanRole];
+      return humanPlayerId !== null && humanPlayerId !== BOT_PLAYER_ID;
+    }
     return this.playerslot.isFull;
   }
 
   startGame(): void {
     this.gameState.startTime = Date.now();
+
+    // If bot plays first, schedule its move
+    this.scheduleBotMoveIfNeeded();
   }
 
   pauseGame(): void {
@@ -259,6 +410,12 @@ export default class Connect4Game extends Game<
   }
 
   endGame(): void {
+    // Clear any pending bot move
+    if (this.botMoveTimeout) {
+      clearTimeout(this.botMoveTimeout);
+      this.botMoveTimeout = null;
+    }
+
     logger.info({
       msg: "Connect4 game ended",
       gameType: this.type,
@@ -266,9 +423,6 @@ export default class Connect4Game extends Game<
     });
   }
 
-  /**
-   * Check if game is over (winner or draw).
-   */
   checkEndConditions(): boolean {
     return (
       this.gameState.winner !== null ||
@@ -291,119 +445,19 @@ export default class Connect4Game extends Game<
       is_draw: isDraw,
       duration: Date.now() - this.gameState.startTime,
       players: this.playerslot.roles,
+      vsBot: this.gameConfig.hasBot,
+      botDifficulty: this.gameConfig.botDifficulty,
     };
   }
 
   // ===========================================================================
-  // PRIVATE HELPERS
+  // PRIVATE HELPERS (Logic from Connect4MinimaxAdapter mostly redundant but keeping for internal game logic)
   // ===========================================================================
 
-  /**
-   * Check if there's a winner by examining all directions from every piece.
-   *
-   * @returns The winning player color, or null if no winner yet
-   */
   private checkWinner(): PlayerColor | null {
-    // Check all pieces on the board
-    for (let row = 0; row < this.gameConfig.rows; row++) {
-      for (let col = 0; col < this.gameConfig.columns; col++) {
-        const piece = this.gameState.board[row][col];
-        if (!piece) continue;
-
-        // Check four directions from this piece
-        // 1. Horizontal (right)
-        if (this.countDirection(piece, row, col, 0, 1) >= this.gameConfig.winCondition)
-          return piece;
-
-        // 2. Vertical (down)
-        if (this.countDirection(piece, row, col, 1, 0) >= this.gameConfig.winCondition)
-          return piece;
-
-        // 3. Diagonal (down-right and up-left)
-        if (
-          this.countBidirectional(piece, row, col, 1, 1) >=
-          this.gameConfig.winCondition
-        )
-          return piece;
-
-        // 4. Diagonal (down-left and up-right)
-        if (
-          this.countBidirectional(piece, row, col, 1, -1) >=
-          this.gameConfig.winCondition
-        )
-          return piece;
-      }
-    }
-
+    // Reusing the adapter checkWin for consistency
+    if (Connect4MinimaxAdapter.checkWin(this.gameState.board, "Red")) return "Red";
+    if (Connect4MinimaxAdapter.checkWin(this.gameState.board, "Yellow")) return "Yellow";
     return null;
-  }
-
-  /**
-   * Count consecutive pieces in one direction from a starting position.
-   *
-   * @param piece - The piece color to check
-   * @param startRow - Starting row
-   * @param startCol - Starting column
-   * @param rowDelta - Row increment (-1, 0, or 1)
-   * @param colDelta - Column increment (-1, 0, or 1)
-   * @returns Count of consecutive pieces in that direction
-   */
-  private countDirection(
-    piece: PlayerColor,
-    startRow: number,
-    startCol: number,
-    rowDelta: number,
-    colDelta: number
-  ): number {
-    let count = 0;
-    let row = startRow;
-    let col = startCol;
-
-    while (
-      row >= 0 &&
-      row < this.gameConfig.rows &&
-      col >= 0 &&
-      col < this.gameConfig.columns &&
-      this.gameState.board[row][col] === piece
-    ) {
-      count++;
-      row += rowDelta;
-      col += colDelta;
-    }
-
-    return count;
-  }
-
-  /**
-   * Count consecutive pieces in both directions from a starting position.
-   * Used for diagonal checking where we need to check both directions.
-   *
-   * @param piece - The piece color to check
-   * @param startRow - Starting row
-   * @param startCol - Starting column
-   * @param rowDelta - Row increment for forward direction (-1, 0, or 1)
-   * @param colDelta - Column increment for forward direction (-1, 0, or 1)
-   * @returns Total count of consecutive pieces in both directions (including the start)
-   */
-  private countBidirectional(
-    piece: PlayerColor,
-    startRow: number,
-    startCol: number,
-    rowDelta: number,
-    colDelta: number
-  ): number {
-    // Count in forward direction (including start)
-    const forward = this.countDirection(piece, startRow, startCol, rowDelta, colDelta);
-
-    // Count in backward direction (excluding start)
-    const backward = this.countDirection(
-      piece,
-      startRow - rowDelta,
-      startCol - colDelta,
-      -rowDelta,
-      -colDelta
-    );
-
-    return forward + backward;
   }
 }

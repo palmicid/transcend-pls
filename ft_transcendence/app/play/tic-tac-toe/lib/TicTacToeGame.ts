@@ -269,6 +269,10 @@ export default class TicTacToeGame extends Game<
     if (role === this.gameState.currentTurn && this.gameState.board[move.cell] === null) {
       this.gameState.board[move.cell] = role;
       this.gameState.currentTurn = this.gameState.currentTurn === "X" ? "O" : "X";
+      this.updateState(); // Check for winner
+
+      // Trigger bot if it's now its turn
+      this.scheduleBotMoveIfNeeded();
     }
   }
 

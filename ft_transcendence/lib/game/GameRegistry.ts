@@ -235,7 +235,7 @@ GameRegistry.register({
   maxPlayers: 2,
   roles: ["Red", "Yellow"] as const,
   firstTurn: "Red",
-  supportsBots: false, // Connect4 does not support bots (yet)
+  supportsBots: true, // Connect4 supports bots
 
   boardInfo: { type: "grid", rows: 6, cols: 7 },
   createEmptyBoard: () => Array(6).fill(null).map(() => Array(7).fill(null)),

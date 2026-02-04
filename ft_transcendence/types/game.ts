@@ -47,6 +47,15 @@ export interface RoomInfo {
 // =============================================================================
 
 /**
+ * Bot configuration in snapshots.
+ */
+export interface BotConfig {
+  role: string;
+  difficulty: number | null;
+  delayMs: number;
+}
+
+/**
  * Generic snapshot structure sent via SSE.
  * Board type varies by game.
  */
@@ -60,6 +69,7 @@ export interface RoomSnapshot<TBoard = unknown> {
   isDraw: boolean;
   players: PlayerInfo[];
   maxPlayers: number;
+  bot?: BotConfig | null;
 }
 
 // =============================================================================

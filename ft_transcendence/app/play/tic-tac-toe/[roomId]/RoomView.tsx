@@ -1,12 +1,23 @@
 "use client";
 
-import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { leaveLobbyRoom } from "@/app/play/actions";
-import { submitTicTacToeMove, startTicTacToeGame } from "../actions";
+import { submitTicTacToeMove, startTicTacToeGame, setBotForSlot, removeBotFromSlot } from "../actions";
 import useGameSSE from "@/hooks/useGameSSE";
 import GameRoomShell from "@/components/game/room/GameRoomShell";
 import PlayerSlotCard from "@/components/game/room/PlayerSlotCard";
+import BotSlotToggle from "@/components/game/BotSlotToggle";
+import {
+  getLobbyState,
+  getRoomStatusMessage,
+  getPlayerByRole,
+  isMeRole,
+  getBotSlotProps,
+  createLeaveHandler,
+  createStartHandler,
+  createMoveHandler,
+  createBotHandlers,
+} from "@/components/game/room/roomViewUtils";
 import { X, Circle, Play } from "lucide-react";
 
 export type GameType = "tic-tac-toe";
@@ -39,78 +50,65 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
   // Game state helpers
   const isGameInProgress = roomStatus === "IN_GAME";
   const isGameEnded = roomStatus === "ENDED" || !!winner || isDraw;
-  const isLobby = roomStatus === "OPEN" || roomStatus === "READY";
-
-  // With bot, we can start with 1 human + 1 bot
-  const hasBot = !!botConfig;
-  const humanPlayerCount = players.filter((p) => !p.isBot).length;
-  const canStartGame =
-    (roomStatus === "READY" || roomStatus === "OPEN") &&
-    ((hasBot && humanPlayerCount >= 1) || players.length >= 2);
+  const { hasBot, humanPlayerCount, canStartGame } = getLobbyState({
+    roomStatus,
+    players,
+    bot: botConfig,
+    maxPlayers: snapshot?.maxPlayers || 2,
+  });
 
   const isMyTurn = isGameInProgress && myRole === currentTurn;
   const canClickBoard = isGameInProgress && isMyTurn && !winner && !isDraw;
 
   // Helpers
-  const getPlayerByRole = (role: string) => players.find((p) => p.role === role);
-  const playerX = getPlayerByRole("X");
-  const playerO = getPlayerByRole("O");
-  const isMe = (role: string) => myRole === role;
+  const playerX = getPlayerByRole(players, "X");
+  const playerO = getPlayerByRole(players, "O");
+  const isMe = (role: string) => isMeRole(myRole, role);
 
-  const handleLeave = useCallback(async () => {
-    await leaveLobbyRoom(roomId, userId);
-    router.push("/play/tic-tac-toe");
-  }, [roomId, userId, router]);
+  const handleLeave = createLeaveHandler({
+    roomId,
+    userId,
+    router,
+    redirectPath: "/play/tic-tac-toe",
+    leaveFn: leaveLobbyRoom,
+  });
 
-  const handleStart = useCallback(async () => {
-    await startTicTacToeGame(roomId);
-  }, [roomId]);
+  const handleStart = createStartHandler({
+    roomId,
+    startFn: startTicTacToeGame,
+  });
 
-  const handleMove = useCallback(
-    async (cell: number) => {
-      if (!canClickBoard) return;
-      await submitTicTacToeMove(roomId, userId, cell);
-    },
-    [roomId, userId, canClickBoard]
-  );
+  const handleMove = createMoveHandler<number>({
+    roomId,
+    userId,
+    canMove: canClickBoard,
+    submitFn: submitTicTacToeMove,
+  });
+
+  const { handleSetBot, handleRemoveBot } = createBotHandlers<"X" | "O">({
+    roomId,
+    setBotForSlot,
+    removeBotFromSlot,
+    onError: console.error,
+  });
 
   // Status message
-  const getStatusMessage = () => {
-    if (!isConnected) return { text: "Connecting...", color: "text-white/50" };
-    if (winner) {
-      const didIWin = winner === myRole;
-      const botWon = botConfig?.role === winner;
-      if (didIWin) {
-        return { text: "🎉 You Win!", color: "text-emerald-300" };
-      } else if (botWon) {
-        return { text: "🤖 Bot Wins!", color: "text-cyan-300" };
-      } else {
-        return { text: `😔 ${winner} Wins`, color: "text-red-300" };
-      }
-    }
-    if (isDraw) return { text: "🤝 It's a Draw!", color: "text-amber-300" };
-    if (isGameInProgress) {
-      const isBotTurn = botConfig?.role === currentTurn;
-      if (isMyTurn) {
-        return { text: "🎯 Your turn — make a move!", color: "text-emerald-300" };
-      } else if (isBotTurn) {
-        return { text: "🤖 Bot is thinking...", color: "text-cyan-300" };
-      } else {
-        return { text: "⏳ Opponent's turn...", color: "text-white/60" };
-      }
-    }
-    if (canStartGame) {
-      return { text: "✓ Ready to play! Click Start.", color: "text-emerald-300" };
-    }
-    return {
-      text: hasBot
-        ? `Waiting for you to join (${humanPlayerCount}/1)`
-        : `Waiting for players (${players.length}/2)`,
-      color: "text-white/50",
-    };
-  };
-
-  const status = getStatusMessage();
+  const status = getRoomStatusMessage({
+    isConnected,
+    winner,
+    myRole,
+    isDraw,
+    isGameInProgress,
+    isMyTurn,
+    currentTurn,
+    botRole: botConfig?.role ?? null,
+    canStartGame,
+    hasBot,
+    humanPlayerCount,
+    playersLength: players.length,
+    maxPlayers: snapshot?.maxPlayers || 2,
+    myTurnText: "🎯 Your turn — make a move!",
+  });
 
   return (
     <GameRoomShell
@@ -135,6 +133,18 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
               border: "border-cyan-500/30",
               text: "text-cyan-400",
             }}
+            action={
+              <BotSlotToggle
+                {...getBotSlotProps({
+                  role: "X",
+                  player: playerX,
+                  bot: botConfig,
+                  isGameInProgress,
+                })}
+                onSetBot={(diff) => handleSetBot("X", diff)}
+                onRemoveBot={handleRemoveBot}
+              />
+            }
           />
           <PlayerSlotCard
             role="O"
@@ -147,6 +157,18 @@ export default function RoomView({ roomId, userId, gameType, initialState }: Roo
               border: "border-fuchsia-500/30",
               text: "text-fuchsia-400",
             }}
+            action={
+              <BotSlotToggle
+                {...getBotSlotProps({
+                  role: "O",
+                  player: playerO,
+                  bot: botConfig,
+                  isGameInProgress,
+                })}
+                onSetBot={(diff) => handleSetBot("O", diff)}
+                onRemoveBot={handleRemoveBot}
+              />
+            }
           />
         </div>
 

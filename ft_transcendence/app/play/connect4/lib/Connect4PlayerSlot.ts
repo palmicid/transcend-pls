@@ -6,9 +6,11 @@
  * - Assigning players to available slots
  * - Tracking which player is Red or Yellow
  * - Removing players when they disconnect
+ * - Bot player support
  */
 
 import { PlayerSlot } from "@/lib/game";
+import { BOT_PLAYER_ID } from "@/lib/bot";
 
 /**
  * The two possible colors/roles in Connect Four.
@@ -27,6 +29,10 @@ export default class Connect4PlayerSlot implements PlayerSlot {
    */
   roles: Record<PlayerColor, string | null> = { Red: null, Yellow: null };
 
+  // ===========================================================================
+  // HUMAN PLAYER MANAGEMENT
+  // ===========================================================================
+
   /**
    * Assign a player to an available slot.
    *
@@ -40,7 +46,7 @@ export default class Connect4PlayerSlot implements PlayerSlot {
     if (this.roles.Red === playerId) return "Red";
     if (this.roles.Yellow === playerId) return "Yellow";
 
-    // Assign to first available slot
+    // Assign to first available slot (not occupied by bot)
     if (this.roles.Red === null) {
       this.roles.Red = playerId;
       return "Red";
@@ -75,6 +81,52 @@ export default class Connect4PlayerSlot implements PlayerSlot {
     if (this.roles.Yellow === playerId) this.roles.Yellow = null;
   }
 
+  // ===========================================================================
+  // BOT PLAYER MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Assign the bot to a specific role.
+   */
+  assignBot(role: PlayerColor): void {
+    const current = this.roles[role];
+    if (current !== null && current !== BOT_PLAYER_ID) {
+      throw new Error(
+        `Cannot assign bot to role "${role}": slot is occupied by a human player.`
+      );
+    }
+    this.roles[role] = BOT_PLAYER_ID;
+  }
+
+  /**
+   * Remove the bot from a role.
+   */
+  removeBot(role: PlayerColor): void {
+    if (this.roles[role] === BOT_PLAYER_ID) {
+      this.roles[role] = null;
+    }
+  }
+
+  /**
+   * Check if a role is occupied by the bot.
+   */
+  isBot(role: PlayerColor): boolean {
+    return this.roles[role] === BOT_PLAYER_ID;
+  }
+
+  /**
+   * Get the bot's role, if any.
+   */
+  getBotRole(): PlayerColor | null {
+    if (this.roles.Red === BOT_PLAYER_ID) return "Red";
+    if (this.roles.Yellow === BOT_PLAYER_ID) return "Yellow";
+    return null;
+  }
+
+  // ===========================================================================
+  // SLOT STATUS
+  // ===========================================================================
+
   /**
    * Check if both slots are occupied.
    */
@@ -86,6 +138,16 @@ export default class Connect4PlayerSlot implements PlayerSlot {
    * Check if there are empty slots available.
    */
   get canAcceptMorePlayers(): boolean {
-    return this.roles.Red === null || this.roles.Yellow === null;
+    return !this.isFull;
+  }
+
+  /**
+   * Get the number of human players currently in slots.
+   */
+  get humanPlayerCount(): number {
+    let count = 0;
+    if (this.roles.Red !== null && this.roles.Red !== BOT_PLAYER_ID) count++;
+    if (this.roles.Yellow !== null && this.roles.Yellow !== BOT_PLAYER_ID) count++;
+    return count;
   }
 }

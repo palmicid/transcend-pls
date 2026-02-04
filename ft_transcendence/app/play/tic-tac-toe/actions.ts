@@ -52,6 +52,22 @@ async function syncRoomToDb(roomId: string, room: Room) {
   });
 }
 
+function attachBotMoveCallback(roomId: string, room: Room): void {
+  const game: any = room.game;
+  if (!game || typeof game.onBotMove === "undefined") return;
+
+  game.onBotMove = async () => {
+    const ended = typeof game.checkEndConditions === "function" ? game.checkEndConditions() : false;
+
+    if (ended && room.status !== "ENDED") {
+      room.end();
+    }
+
+    await syncRoomToDb(roomId, room);
+    await broadcastRoomSnapshot(roomId, ended ? "game_end" : "game_move");
+  };
+}
+
 /**
  * Broadcast full Prisma snapshot to all room subscribers.
  */
@@ -70,6 +86,24 @@ async function broadcastRoomSnapshot(roomId: string, event: string) {
   const board = (room.board_state as (string | null)[]) || Array(9).fill(null);
   const isDraw = !room.winner_role && board.every((c) => c !== null);
 
+  const players = room.players.map((p) => ({
+    userId: p.user_id,
+    displayName: p.user.display_name,
+    role: p.role,
+    isConnected: true,
+    isBot: false,
+  }));
+
+  if (room.bot_role && room.bot_difficulty) {
+    players.push({
+      userId: -1,
+      displayName: `Bot (${room.bot_difficulty === 1 ? "Easy" : room.bot_difficulty === 3 ? "Medium" : "Hard"})`,
+      role: room.bot_role,
+      isConnected: true,
+      isBot: true,
+    });
+  }
+
   broadcaster.broadcast(
     roomId,
     JSON.stringify({
@@ -80,13 +114,15 @@ async function broadcastRoomSnapshot(roomId: string, event: string) {
       currentTurn: room.current_turn,
       winner: room.winner_role,
       isDraw,
-      players: room.players.map((p) => ({
-        userId: p.user_id,
-        displayName: p.user.display_name,
-        role: p.role,
-        isConnected: true,
-      })),
+      players,
       maxPlayers: room.max_players,
+      bot: room.bot_role
+        ? {
+            role: room.bot_role,
+            difficulty: room.bot_difficulty,
+            delayMs: room.bot_delay_ms ?? 500,
+          }
+        : null,
     })
   );
 }
@@ -262,6 +298,8 @@ export async function submitTicTacToeMove(
       return { ok: false, snapshot: null };
     }
 
+    attachBotMoveCallback(roomId, room);
+
     const success = room.submitAction(session.userId.toString(), { cell });
 
     if (success) {
@@ -287,6 +325,8 @@ export async function startTicTacToeGame(roomId: string) {
     const room = await loadAndValidateRoom(roomId);
     if (!room) return { ok: false };
 
+    attachBotMoveCallback(roomId, room);
+
     const started = room.start();
 
     if (started) {
@@ -303,4 +343,85 @@ export async function startTicTacToeGame(roomId: string) {
     console.error("Failed to start game:", error);
     return { ok: false };
   }
+}
+
+/**
+ * Configure a bot for a player slot in Tic-Tac-Toe.
+ */
+export async function setBotForSlot(params: {
+  roomId: string;
+  role: "X" | "O";
+  difficulty: 1 | 3 | 9;
+}) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  const { roomId, role, difficulty } = params;
+
+  // Verify room ownership
+  const room = roomManager.getRoom(roomId);
+  if (!room) return { error: "Room not found" };
+
+  const roomDb = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!roomDb || roomDb.owner_id !== session.userId) {
+    return { error: "Only room owner can add bots" };
+  }
+
+  // Update room state in memory
+  const game = room.game as any; // Cast to access configureBot
+  if (typeof game.configureBot === 'function') {
+    game.configureBot(role, difficulty);
+  }
+
+  // Update DB persistence
+  await prisma.room.update({
+    where: { id: roomId },
+    data: {
+      bot_role: role,
+      bot_difficulty: difficulty,
+      bot_delay_ms: 500,
+    },
+  });
+
+    // Broadcast full snapshot update
+    await broadcastRoomSnapshot(roomId, "config_change");
+
+  return { ok: true };
+}
+
+/**
+ * Remove bot from any slot in the room.
+ */
+export async function removeBotFromSlot(roomId: string) {
+  const session = await getSession();
+  if (!session) return { error: "Unauthorized" };
+
+  // Verify room ownership
+  const room = roomManager.getRoom(roomId);
+  if (!room) return { error: "Room not found" };
+
+  const roomDb = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!roomDb || roomDb.owner_id !== session.userId) {
+    return { error: "Only room owner can manage bots" };
+  }
+
+  // Update room state in memory
+  const game = room.game as any;
+  if (typeof game.configureBot === 'function') {
+    game.configureBot(null); // Remove bot
+  }
+
+  // Update DB persistence
+  await prisma.room.update({
+    where: { id: roomId },
+    data: {
+      bot_role: null,
+      bot_difficulty: null,
+    },
+  });
+
+    // Broadcast full snapshot update
+    await broadcastRoomSnapshot(roomId, "config_change");
+
+  return { ok: true };
 }

@@ -30,7 +30,23 @@ async function syncRoomToDb(roomId: string, room: Room, gameId: string): Promise
   });
 }
 
-async function broadcastRoomSnapshot(roomId: string, event: string, gameId: string): Promise<void> {
+function attachBotMoveCallback(roomId: string, room: Room, gameId: string): void {
+  const game: any = room.game;
+  if (!game || typeof game.onBotMove === "undefined") return;
+
+  game.onBotMove = async () => {
+    const ended = typeof game.checkEndConditions === "function" ? game.checkEndConditions() : false;
+
+    if (ended && room.status !== "ENDED") {
+      room.end();
+    }
+
+    await syncRoomToDb(roomId, room, gameId);
+    await broadcastRoomSnapshot(roomId, ended ? "game_end" : "game_move", gameId);
+  };
+}
+
+export async function broadcastRoomSnapshot(roomId: string, event: string, gameId: string): Promise<void> {
   const gameDef = GameRegistry.getOrThrow(gameId);
 
   const room = await prisma.room.findUnique({
@@ -47,6 +63,24 @@ async function broadcastRoomSnapshot(roomId: string, event: string, gameId: stri
   const board = gameDef.parseBoard(room.board_state);
   const isDraw = gameDef.checkDraw(board, room.winner_role);
 
+  const players = room.players.map((p: any) => ({
+    userId: p.user_id,
+    displayName: p.user.display_name,
+    role: p.role,
+    isConnected: true,
+    isBot: false,
+  }));
+
+  if (room.bot_role && room.bot_difficulty) {
+    players.push({
+      userId: -1,
+      displayName: `Bot (${room.bot_difficulty === 1 ? "Easy" : room.bot_difficulty === 3 ? "Medium" : "Hard"})`,
+      role: room.bot_role,
+      isConnected: true,
+      isBot: true,
+    });
+  }
+
   broadcaster.broadcast(
     roomId,
     JSON.stringify({
@@ -58,13 +92,15 @@ async function broadcastRoomSnapshot(roomId: string, event: string, gameId: stri
       currentTurn: room.current_turn,
       winner: room.winner_role,
       isDraw,
-      players: room.players.map((p: any) => ({
-        userId: p.user_id,
-        displayName: p.user.display_name,
-        role: p.role,
-        isConnected: true,
-      })),
+      players,
       maxPlayers: room.max_players,
+      bot: room.bot_role
+        ? {
+            role: room.bot_role,
+            difficulty: room.bot_difficulty,
+            delayMs: room.bot_delay_ms ?? 500,
+          }
+        : null,
     })
   );
 }
@@ -126,6 +162,8 @@ export async function submitGameMove(
   try {
     const room = await loadAndValidateRoom(roomId);
     if (!room) return { ok: false, error: "Room not found", snapshot: null };
+
+    attachBotMoveCallback(roomId, room, gameId);
 
     // Get current state from DB for validation
     const dbRoom = await prisma.room.findUnique({ where: { id: roomId } });
@@ -191,6 +229,8 @@ export async function startGame(roomId: string, gameId: string): Promise<{ ok: b
   try {
     const room = await loadAndValidateRoom(roomId);
     if (!room) return { ok: false };
+
+    attachBotMoveCallback(roomId, room, gameId);
 
     const started = room.start();
 

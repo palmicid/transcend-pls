@@ -21,6 +21,7 @@ import { broadcaster } from "@/lib/broadcast";
 import prisma from "@/lib/prisma";
 import { GameRegistry } from "@/lib/game/GameRegistry";
 import { RoomSnapshot, PlayerInfo } from "@/types/game";
+import { getTotalPlayerCount } from "@/lib/bot/botHelpers";
 
 // =============================================================================
 // FACTORY FUNCTION
@@ -49,6 +50,26 @@ export function createGameSSERouteHandler(gameId: string) {
     const board = gameDef.parseBoard(room.board_state);
     const isDraw = gameDef.checkDraw(board, room.winner_role);
 
+    // Map human players
+    const players: PlayerInfo[] = room.players.map((p: any): PlayerInfo => ({
+      userId: p.user_id,
+      displayName: p.user.display_name,
+      role: p.role,
+      isConnected: true,
+      isBot: false,
+    }));
+
+    // Add bot as a virtual player if configured
+    if (room.bot_role && room.bot_difficulty) {
+      players.push({
+        userId: -1,
+        displayName: `Bot (${room.bot_difficulty === 1 ? 'Easy' : room.bot_difficulty === 3 ? 'Medium' : 'Hard'})`,
+        role: room.bot_role,
+        isConnected: true,
+        isBot: true,
+      });
+    }
+
     return {
       roomId: room.id,
       gameType: room.game_type,
@@ -57,14 +78,13 @@ export function createGameSSERouteHandler(gameId: string) {
       currentTurn: room.current_turn,
       winner: room.winner_role,
       isDraw,
-      players: room.players.map((p: any): PlayerInfo => ({
-        userId: p.user_id,
-        displayName: p.user.display_name,
-        role: p.role,
-        isConnected: true,
-        isBot: p.user_id === -1, // Simple bot check
-      })),
+      players,
       maxPlayers: room.max_players,
+      bot: room.bot_role ? {
+        role: room.bot_role,
+        difficulty: room.bot_difficulty,
+        delayMs: room.bot_delay_ms ?? 500,
+      } : null,
     };
   }
 
@@ -94,10 +114,20 @@ export function createGameSSERouteHandler(gameId: string) {
       where: { id: roomId },
       include: { players: true },
     });
-    if (!room || room.players.length >= room.max_players) return null;
+    if (!room) return null;
+
+    const currentPlayers = getTotalPlayerCount(
+      room.players.length,
+      room.bot_role,
+      room.bot_difficulty
+    );
+    if (currentPlayers >= room.max_players) return null;
 
     // Assign role (first available from gameDef.roles)
     const takenRoles = new Set(room.players.map((p: any) => p.role));
+    if (room.bot_role && room.bot_difficulty) {
+      takenRoles.add(room.bot_role);
+    }
     const role = gameDef.roles.find(r => !takenRoles.has(r));
     if (!role) return null;
 
@@ -106,7 +136,12 @@ export function createGameSSERouteHandler(gameId: string) {
     });
 
     // Transition to READY when full
-    if (room.players.length + 1 >= room.max_players) {
+    const totalPlayers = getTotalPlayerCount(
+      room.players.length + 1,
+      room.bot_role,
+      room.bot_difficulty
+    );
+    if (totalPlayers >= room.max_players) {
       await prisma.room.update({
         where: { id: roomId },
         data: { status: "READY" },

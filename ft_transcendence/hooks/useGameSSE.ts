@@ -100,36 +100,42 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
         }
 
         // Update snapshot from any event that includes room data
-        if (data.roomId && data.board !== undefined) {
-          const players: PlayerInfo[] = data.players || [];
+        // Note: Check for either board or snapshot (config changes include snapshot)
+        const snapshotData = data.snapshot || data;
+        if (data.roomId && (snapshotData.board !== undefined)) {
+          const playersRaw = snapshotData.players;
+          const playersFromSnapshot: PlayerInfo[] | null = Array.isArray(playersRaw)
+            ? (playersRaw as PlayerInfo[])
+            : null;
 
           // Derive myRole from players list using current userId (via ref)
           // Use ref instead of adding userId to dependency array to avoid reconnecting
           // the SSE whenever userId changes
-          if (userIdRef.current) {
-            const derived = players.find((p) => p.userId === userIdRef.current)?.role || null;
+          if (userIdRef.current != null && playersFromSnapshot) {
+            const derived =
+              playersFromSnapshot.find((p) => p.userId === userIdRef.current)?.role || null;
             if (derived) {
               setMyRole(derived);
             }
           }
 
           // Update myRole if provided explicitly in the event (initial snapshot)
-          if (data.myRole) {
-            setMyRole(data.myRole);
+          if (snapshotData.myRole) {
+            setMyRole(snapshotData.myRole);
           }
 
-          setSnapshot({
+          setSnapshot((prev) => ({
             roomId: data.roomId,
-            status: data.status,
-            board: data.board,
-            currentTurn: data.currentTurn,
-            winner: data.winner,
-            isDraw: data.isDraw,
-            players,
-            maxPlayers: data.maxPlayers || 2,
-            myRole: data.myRole,
-            bot: data.bot || null,
-          });
+            status: data.status || snapshotData.status,
+            board: snapshotData.board,
+            currentTurn: snapshotData.currentTurn,
+            winner: snapshotData.winner,
+            isDraw: snapshotData.isDraw || snapshotData.is_draw,
+            players: playersFromSnapshot ?? prev?.players ?? [],
+            maxPlayers: snapshotData.maxPlayers || 2,
+            myRole: snapshotData.myRole,
+            bot: snapshotData.bot || null,
+          }));
         }
       } catch (err) {
         console.error("[SSE] Parse error:", err);

@@ -17,6 +17,7 @@ interface PlayerSlotCardProps {
   };
   isCurrentTurn: boolean;
   isMe: boolean;
+  action?: ReactNode;
   colorClasses: {
     bg: string;
     border: string;
@@ -30,6 +31,7 @@ export default function PlayerSlotCard({
   player,
   isCurrentTurn,
   isMe,
+  action,
   colorClasses,
 }: PlayerSlotCardProps) {
   return (
@@ -38,6 +40,7 @@ export default function PlayerSlotCard({
         rounded-2xl border p-4 ${colorClasses.bg} ${colorClasses.border}
         ${isCurrentTurn ? "ring-2 ring-white/30" : ""}
         ${isMe ? "ring-1 ring-white/20" : ""}
+        relative
       `}
     >
       <div className="flex items-center justify-between mb-2">
@@ -50,17 +53,20 @@ export default function PlayerSlotCard({
             </span>
           )}
         </div>
-        {player && (
-          <span className="flex items-center gap-1 text-xs">
-            {player.isBot ? (
-              <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] text-white/50">BOT</span>
-            ) : player.isConnected ? (
-              <Wifi className="h-3 w-3 text-emerald-400" />
-            ) : (
-              <WifiOff className="h-3 w-3 text-red-400" />
-            )}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+           {action}
+           {player && (
+             <span className="flex items-center gap-1 text-xs">
+               {player.isBot ? (
+                 <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] text-white/50">BOT</span>
+               ) : player.isConnected ? (
+                 <Wifi className="h-3 w-3 text-emerald-400" />
+               ) : (
+                 <WifiOff className="h-3 w-3 text-red-400" />
+               )}
+             </span>
+           )}
+        </div>
       </div>
       {player ? (
         <div className="flex items-center gap-2">

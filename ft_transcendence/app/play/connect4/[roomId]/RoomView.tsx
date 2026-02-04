@@ -1,12 +1,23 @@
 "use client";
 
-import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { leaveLobbyRoom } from "@/app/play/actions";
-import { submitConnect4Move, startConnect4Game } from "../actions";
+import { submitConnect4Move, startConnect4Game, setBotForSlot, removeBotFromSlot } from "../actions";
 import useGameSSE from "@/hooks/useGameSSE";
 import GameRoomShell from "@/components/game/room/GameRoomShell";
 import PlayerSlotCard from "@/components/game/room/PlayerSlotCard";
+import BotSlotToggle from "@/components/game/BotSlotToggle";
+import {
+  getLobbyState,
+  getRoomStatusMessage,
+  getPlayerByRole,
+  isMeRole,
+  getBotSlotProps,
+  createLeaveHandler,
+  createStartHandler,
+  createMoveHandler,
+  createBotHandlers,
+} from "@/components/game/room/roomViewUtils";
 import { Play } from "lucide-react";
 
 interface RoomViewProps {
@@ -31,58 +42,69 @@ export default function RoomView({ roomId, userId, initialState }: RoomViewProps
   const winner = snapshot?.winner || null;
   const isDraw = snapshot?.isDraw || false;
   const players = snapshot?.players || [];
+  const botConfig = snapshot?.bot;
 
   // Game state helpers
   const isGameInProgress = roomStatus === "IN_GAME";
   const isGameEnded = roomStatus === "ENDED" || !!winner || isDraw;
-  const canStartGame = roomStatus === "READY" && players.length >= 2;
+  const { hasBot, humanPlayerCount, canStartGame } = getLobbyState({
+    roomStatus,
+    players,
+    bot: botConfig,
+    maxPlayers: snapshot?.maxPlayers || 2,
+  });
   const isMyTurn = isGameInProgress && myRole === currentTurn;
   const canClickBoard = isGameInProgress && isMyTurn && !winner && !isDraw;
 
   // Helpers
-  const getPlayerByRole = (role: string) => players.find((p) => p.role === role);
-  const playerRed = getPlayerByRole("Red");
-  const playerYellow = getPlayerByRole("Yellow");
-  const isMe = (role: string) => myRole === role;
+  const playerRed = getPlayerByRole(players, "Red");
+  const playerYellow = getPlayerByRole(players, "Yellow");
+  const isMe = (role: string) => isMeRole(myRole, role);
 
-  const handleLeave = useCallback(async () => {
-    await leaveLobbyRoom(roomId, userId);
-    router.push("/play/connect4");
-  }, [roomId, userId, router]);
+  const handleLeave = createLeaveHandler({
+    roomId,
+    userId,
+    router,
+    redirectPath: "/play/connect4",
+    leaveFn: leaveLobbyRoom,
+  });
 
-  const handleStart = useCallback(async () => {
-    await startConnect4Game(roomId);
-  }, [roomId]);
+  const handleStart = createStartHandler({
+    roomId,
+    startFn: startConnect4Game,
+  });
 
-  const handleMove = useCallback(
-    async (colIndex: number) => {
-      if (!canClickBoard) return;
-      await submitConnect4Move(roomId, userId, colIndex);
-    },
-    [roomId, userId, canClickBoard]
-  );
+  const handleMove = createMoveHandler<number>({
+    roomId,
+    userId,
+    canMove: canClickBoard,
+    submitFn: submitConnect4Move,
+  });
+
+  const { handleSetBot, handleRemoveBot } = createBotHandlers<"Red" | "Yellow">({
+    roomId,
+    setBotForSlot,
+    removeBotFromSlot,
+    onError: console.error,
+  });
 
   // Status message
-  const getStatusMessage = () => {
-    if (!isConnected) return { text: "Connecting...", color: "text-white/50" };
-    if (winner) {
-      const didIWin = winner === myRole;
-      return {
-        text: didIWin ? "🎉 You Win!" : `😔 ${winner} Wins`,
-        color: didIWin ? "text-emerald-300" : "text-red-300",
-      };
-    }
-    if (isDraw) return { text: "🤝 It's a Draw!", color: "text-amber-300" };
-    if (isGameInProgress) {
-      return isMyTurn
-        ? { text: "🎯 Your turn — click a column!", color: "text-emerald-300" }
-        : { text: "⏳ Opponent's turn...", color: "text-white/60" };
-    }
-    if (canStartGame) return { text: "✓ Both players ready! Click Start.", color: "text-emerald-300" };
-    return { text: `Waiting for players (${players.length}/2)`, color: "text-white/50" };
-  };
-
-  const status = getStatusMessage();
+  const status = getRoomStatusMessage({
+    isConnected,
+    winner,
+    myRole,
+    isDraw,
+    isGameInProgress,
+    isMyTurn,
+    currentTurn,
+    botRole: botConfig?.role ?? null,
+    canStartGame,
+    hasBot,
+    humanPlayerCount,
+    playersLength: players.length,
+    maxPlayers: snapshot?.maxPlayers || 2,
+    myTurnText: "🎯 Your turn — click a column!",
+  });
 
   return (
     <GameRoomShell
@@ -107,6 +129,18 @@ export default function RoomView({ roomId, userId, initialState }: RoomViewProps
               border: "border-red-500/30",
               text: "text-red-400",
             }}
+            action={
+              <BotSlotToggle
+                {...getBotSlotProps({
+                  role: "Red",
+                  player: playerRed,
+                  bot: botConfig,
+                  isGameInProgress,
+                })}
+                onSetBot={(diff) => handleSetBot("Red", diff)}
+                onRemoveBot={handleRemoveBot}
+              />
+            }
           />
           <PlayerSlotCard
             role="Yellow"
@@ -119,6 +153,18 @@ export default function RoomView({ roomId, userId, initialState }: RoomViewProps
               border: "border-yellow-500/30",
               text: "text-yellow-400",
             }}
+            action={
+              <BotSlotToggle
+                {...getBotSlotProps({
+                  role: "Yellow",
+                  player: playerYellow,
+                  bot: botConfig,
+                  isGameInProgress,
+                })}
+                onSetBot={(diff) => handleSetBot("Yellow", diff)}
+                onRemoveBot={handleRemoveBot}
+              />
+            }
           />
         </div>
 

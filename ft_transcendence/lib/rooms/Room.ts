@@ -382,6 +382,28 @@ export default class Room {
     this.broadcaster.removeListener(this.id, listener);
   }
 
+  /**
+   * Broadcast a custom event to all room subscribers.
+   *
+   * @param event - Event name
+   * @param data - Event payload
+   */
+  public broadcast(event: string, data: any): void {
+    if (!this.broadcaster) return;
+
+    const payload = {
+      roomId: this.id,
+      event,
+      ...data,
+      // Always include current room/game metadata for context
+      status: this.state.current,
+      gameType: this.game?.type,
+      snapshot: this.game?.Snapshot,
+    };
+
+    this.broadcaster.broadcast(this.id, JSON.stringify(payload));
+  }
+
   // ===========================================================================
   // PRIVATE HELPERS
   // ===========================================================================
@@ -390,16 +412,6 @@ export default class Room {
    * Broadcast the current game snapshot to all subscribers.
    */
   private broadcastSnapshot(): void {
-    if (!this.broadcaster || !this.game) return;
-
-    const payload = {
-      roomId: this.id,
-      state: this.state.current,
-      gameType: this.game.type,
-      snapshot: this.game.Snapshot,
-      event: "snapshot",
-    };
-
-    this.broadcaster.broadcast(this.id, JSON.stringify(payload));
+    this.broadcast("snapshot", {});
   }
 }
