@@ -113,7 +113,8 @@ prod-no-ollama: ## Run production environment without Ollama
 	@echo "$(GREEN)🚀 Starting production environment (without Ollama)...$(RESET)"
 	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) --profile prod up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
-	@echo "$(CYAN)   Web app: https://localhost:3000$(RESET)"
+	@echo "$(CYAN)   Web app: https://localhost$(RESET)"
+
 
 # ============================================================================
 # Build
