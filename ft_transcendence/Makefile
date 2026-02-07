@@ -23,6 +23,7 @@ COMPOSE_BASE    := docker-compose.yml
 COMPOSE_DEV     := docker-compose.dev.yml
 COMPOSE_PROD    := docker-compose.prod.yml
 COMPOSE_OLLAMA  := docker-compose.ollama.yml
+COMPOSE_NGINX   := docker-compose.nginx.yml
 
 # Project name
 PROJECT_NAME := ft_transcendence
@@ -79,22 +80,22 @@ help: ## Show this help message
 .PHONY: dev
 dev: ## Run development environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting development environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) --profile dev --profile ollama up --build
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
 	@echo "$(GREEN)🚀 Starting development environment with Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) --profile dev --profile ollama up --build -d
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build -d
 
 .PHONY: dev-no-ollama
 dev-no-ollama: ## Run development environment without Ollama
 	@echo "$(GREEN)🚀 Starting development environment (without Ollama)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) --profile dev up --build
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build
 
 .PHONY: dev-no-ollama-detached
 dev-no-ollama-detached: ## Run development environment without Ollama in background
 	@echo "$(GREEN)🚀 Starting development environment without Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) --profile dev up --build -d
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build -d
 
 # ============================================================================
 # Production Environment
@@ -102,17 +103,17 @@ dev-no-ollama-detached: ## Run development environment without Ollama in backgro
 .PHONY: prod
 prod: ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) --profile prod --profile ollama up --build -d
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile prod --profile ollama up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
-	@echo "$(CYAN)   Web app: http://localhost:3000$(RESET)"
-	@echo "$(CYAN)   Ollama:  http://localhost:11434$(RESET)"
+	@echo "$(CYAN)   Web app: https://localhost:3000$(RESET)"
+	@echo "$(CYAN)   Ollama:  https://localhost:11434$(RESET)"
 
 .PHONY: prod-no-ollama
 prod-no-ollama: ## Run production environment without Ollama
 	@echo "$(GREEN)🚀 Starting production environment (without Ollama)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) --profile prod up --build -d
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) --profile prod up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
-	@echo "$(CYAN)   Web app: http://localhost:3000$(RESET)"
+	@echo "$(CYAN)   Web app: https://localhost:3000$(RESET)"
 
 # ============================================================================
 # Build
@@ -120,12 +121,12 @@ prod-no-ollama: ## Run production environment without Ollama
 .PHONY: build
 build: ## Build all Docker images (including Ollama)
 	@echo "$(GREEN)🔨 Building Docker images...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) build
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) build
 
 .PHONY: build-no-ollama
 build-no-ollama: ## Build Docker images without Ollama
 	@echo "$(GREEN)🔨 Building Docker images (without Ollama)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) build
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_NGINX) build
 
 # ============================================================================
 # Stop & Clean
@@ -133,7 +134,7 @@ build-no-ollama: ## Build Docker images without Ollama
 .PHONY: stop
 stop: ## Stop all running containers
 	@echo "$(YELLOW)⏹️  Stopping all containers...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) down
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down
 	@echo "$(GREEN)✅ All containers stopped$(RESET)"
 
 .PHONY: restart
@@ -142,13 +143,13 @@ restart: stop dev ## Restart development environment
 .PHONY: clean
 clean: ## Remove containers, networks, and volumes
 	@echo "$(RED)🧹 Cleaning up containers and volumes...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) down -v
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v
 	@echo "$(GREEN)✅ Cleanup complete$(RESET)"
 
 .PHONY: fclean
 fclean: ## Full clean (containers, volumes, and images)
 	@echo "$(RED)🧹 Full cleanup (containers, volumes, images)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) down -v --rmi all
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v --rmi all
 	@echo "$(GREEN)✅ Full cleanup complete$(RESET)"
 
 .PHONY: prune
@@ -162,7 +163,7 @@ prune: fclean ## Full clean + Docker system prune
 # ============================================================================
 .PHONY: logs
 logs: ## View logs from all containers
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) logs -f
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) logs -f
 
 .PHONY: logs-web
 logs-web: ## View web container logs
@@ -182,7 +183,7 @@ logs-ollama: ## View Ollama container logs
 .PHONY: status
 status: ## Show container status
 	@echo "$(CYAN)📊 Container Status:$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) ps
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) ps
 
 # ============================================================================
 # Database
