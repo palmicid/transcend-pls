@@ -5,7 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 
 export default async function ProfilePage() {
-  let userId: string;
+  let userId: number;
   try {
     userId = await requireAuth();
   } catch {

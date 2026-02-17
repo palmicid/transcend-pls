@@ -5,7 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import FriendsClient from "@/components/friends/FriendsClient";
 
 export default async function FriendsPage() {
-  let userId: string;
+  let userId: number;
   try {
     userId = await requireAuth();
   } catch {

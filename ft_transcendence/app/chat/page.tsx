@@ -5,7 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import LLMChatApp from "@/components/chat/LLMChatApp";
 
 export default async function ChatPage() {
-  let userId: string;
+  let userId: number;
   try {
     userId = await requireAuth();
   } catch {
