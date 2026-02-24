@@ -15,7 +15,7 @@ export function ProfileInfoGrid({ user }: { user: Record<string, unknown> }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <InfoItem label="Username" value={String(user.username ?? "-")} />
+        <InfoItem label="Display Name" value={String(user.displayName ?? "-")} />
         <InfoItem label="Email" value={String(user.email ?? "-")} />
         <InfoItem
           label="Account Status"

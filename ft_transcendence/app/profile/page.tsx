@@ -1,22 +1,37 @@
 import { redirect } from "next/navigation";
-import prisma from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth/auth-session";
+import { getSession } from "@/lib/auth/auth-session";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 
 export default async function ProfilePage() {
-  let userId: number;
-  try {
-    userId = await requireAuth();
-  } catch {
+  const session = await getSession();
+
+  if (!session?.userId) redirect("/login");
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/user/${session.userId}`,
+    {
+      cache: "no-store",
+      headers: {
+        Cookie: `session=${session.userId}`, // ส่ง cookie ไปด้วย
+      },
+    }
+  );
+
+  if (!res.ok)
     redirect("/login");
-  }
 
-  const me = await prisma.user.findUnique({
-    where: { id: Number(userId) },
-  });
-
-  if (!me) redirect("/login");
+  const raw = await res.json();
+  const me = {
+    id: raw.id,
+    email: raw.email,
+    displayName: raw.display_name,
+    avatarUrl: raw.avatar_url,
+    online: raw.online_status,
+    createdAt: raw.created_at,
+    isVerified: raw.is_verified,
+    use2FA: raw.use2FA,
+  };
 
   return (
     <MainLayout showNav={true}>
