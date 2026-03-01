@@ -3,43 +3,32 @@
 import { useState } from "react";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileInfoGrid } from "@/components/profile/ProfileInfoGrid";
+import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import type { ProfileUser } from "@/types/profile";
 
-export function ProfileCard({ user }: { user: Record<string, unknown> }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Record<string, unknown>>(user);
-
-  function onCancel() {
-    setDraft(user);
-    setEditing(false);
-  }
-
-  function onSave() {
-    console.log("SAVE PROFILE (mock)", draft);
-    setEditing(false);
-  }
+export function ProfileCard({ user }: { user: ProfileUser }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(user);
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl">
-      {/* glow */}
-      <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+    <>
+      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl">
+        <div className="relative p-6 sm:p-8 space-y-8">
+          <ProfileHeader
+            user={currentUser}
+            onEdit={() => setModalOpen(true)}
+          />
 
-      <div className="relative p-6 sm:p-8 space-y-8">
-        {/* HERO SECTION */}
-        <ProfileHeader
-          user={draft}
-          editing={editing}
-          onEdit={() => setEditing(true)}
-          onCancel={onCancel}
-          onSave={onSave}
-          onChange={(k, v) =>
-            setDraft((prev) => ({ ...prev, [k]: v }))
-          }
-        />
+          <ProfileInfoGrid user={currentUser} />
+        </div>
+      </section>
 
-        {/* INFO GRID */}
-        <ProfileInfoGrid user={draft} />
-      </div>
-    </section>
+      <EditProfileModal
+        user={currentUser}
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={(updated) => setCurrentUser(updated)}
+      />
+    </>
   );
 }
