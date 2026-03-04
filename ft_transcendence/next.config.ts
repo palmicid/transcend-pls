@@ -36,6 +36,23 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "localhost",
+        port:"9000",
+        pathname: "/avatars/**",
+      },
+      {
+        protocol: "https",
+        hostname: "minio",
+        port: "9000",
+        pathname: "/avatars",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
