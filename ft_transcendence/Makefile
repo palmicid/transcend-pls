@@ -282,3 +282,27 @@ setup: install ## Initial project setup
 
 .PHONY: all
 all: build dev ## Build and run development environment
+
+.PHONY: https-setup
+https-setup:
+	@echo "🔐 HTTPS local certificate setup"
+	@echo ""
+	@if command -v mkcert >/dev/null 2>&1; then \
+		echo "✅ mkcert is installed"; \
+		mkcert -install; \
+		mkdir -p nginx/certs; \
+		mkcert -cert-file nginx/certs/localhost.pem \
+		       -key-file nginx/certs/localhost-key.pem \
+		       localhost; \
+		echo "✅ Certificates generated in nginx/certs"; \
+	else \
+		echo "❌ mkcert is NOT installed"; \
+		echo ""; \
+		echo "Please install mkcert manually:"; \
+		echo "  macOS  : brew install mkcert"; \
+		echo "  Ubuntu : sudo apt install mkcert libnss3-tools"; \
+		echo "  Arch   : sudo pacman -S mkcert nss"; \
+		echo ""; \
+		echo "Then run: make https-setup"; \
+		exit 1; \
+	fi
