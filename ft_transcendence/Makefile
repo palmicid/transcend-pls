@@ -105,7 +105,7 @@ prod: ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
 	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile prod --profile ollama up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
-	@echo "$(CYAN)   Web app: https://localhost:3000$(RESET)"
+	@echo "$(CYAN)   Web app: https://localhost:8443$(RESET)"
 	@echo "$(CYAN)   Ollama:  https://localhost:11434$(RESET)"
 
 .PHONY: prod-no-ollama
