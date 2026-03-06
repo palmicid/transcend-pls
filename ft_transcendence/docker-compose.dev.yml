@@ -15,10 +15,17 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1
+    depends_on:
+      - minio
     profiles:
       - dev
 
   db:
+    profiles:
+      - dev
+      - prod
+
+  minio:
     profiles:
       - dev
       - prod
