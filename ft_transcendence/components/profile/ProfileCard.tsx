@@ -17,6 +17,9 @@ export function ProfileCard({ user }: { user: ProfileUser }) {
           <ProfileHeader
             user={currentUser}
             onEdit={() => setModalOpen(true)}
+            onAvatarChange={(newUrl) =>
+              setCurrentUser((prev) => ({ ...prev, avatarUrl: newUrl }))
+            }
           />
 
           <ProfileInfoGrid user={currentUser} />

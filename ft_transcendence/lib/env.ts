@@ -46,6 +46,16 @@ const envSchema = z.object({
   FTBK_REDIRECT_URI: z.string().url().default('http://localhost:3000/api/auth/callback/42'),
   ENCRYPTION_KEY: z.string(),
   JWT_SECRET: z.string(),
+
+  // MinIO
+  MINIO_ENDPOINT: z.string().default('minio'),
+  MINIO_PORT: z.coerce.number().default(9000),
+  MINIO_ACCESS_KEY: z.string().default('minioadmin'),
+  MINIO_SECRET_KEY: z.string().default('minioadmin'),
+  MINIO_BUCKET: z.string().default('avatars'),
+  MINIO_USE_SSL: z.string().default('false'),
+  MINIO_PUBLIC_HOST: z.string().default('localhost'),
+  MINIO_PUBLIC_PORT: z.coerce.number().default(9000),
 });
 
 /**
