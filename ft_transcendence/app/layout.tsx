@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <nav className="p-4 border-b flex gap-4">
+        <nav className="p-4 border-b flex gap-4 text-white">
           <Link href="/">Home</Link>
           <Link href="/llm">AI Assistant</Link>
           <Link href="/lobby">Tic-Tac-Toe</Link>
@@ -38,19 +38,3 @@ export default function RootLayout({
   )
 }
 
-
-// export default function RootLayout({
-//   children,
-// }: Readonly<{
-//   children: React.ReactNode;
-// }>) {
-//   return (
-//     <html lang="en">
-//       <body
-//         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-//       >
-//         {children}
-//       </body>
-//     </html>
-//   );
-// }

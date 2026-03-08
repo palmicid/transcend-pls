@@ -1,27 +1,30 @@
 "use client";
 
-import type { ReactNode } from "react";
-import type { UserLite } from "@/types/friends";
-import { displayName } from "@/lib/friends/friends.utils";
+import { UserLite } from "@/types/friends";
 import { StatusPill } from "@/components/friends/StatusPill";
+import { colors } from "@/design-system/colors";
+import { typography } from "@/design-system/typography";
 
-export function UserRow({
-  user,
-  action,
-}: {
+type Props = {
   user: UserLite;
-  action: ReactNode;
-}) {
+  action: React.ReactNode;
+};
+
+export default function UserRow({ user, action }: Props) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <div className="font-semibold truncate">{displayName(user)}</div>
-        <div className="text-xs text-white/55 truncate">
-          @{user.username ?? "-"} • {user.email}
+    <div className={`flex items-center justify-between p-4 rounded-xl border ${colors.border} ${colors.surface}`}>
+      <div>
+
+        <div className={`${typography.body} ${colors.textPrimary} font-medium`}>
+          {user.displayName}
         </div>
-        <div className="mt-2">
-          <StatusPill online={user.online} />
+
+        <div className={`${typography.caption} ${colors.textSecondary} my-1`}>
+          {user.email}
         </div>
+        
+        <StatusPill online={user.online} />
+
       </div>
       {action}
     </div>
