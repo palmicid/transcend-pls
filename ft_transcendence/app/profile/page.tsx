@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/auth-session";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ProfileCard } from "@/components/profile/ProfileCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default async function ProfilePage() {
   const session = await getSession();
@@ -36,12 +37,10 @@ export default async function ProfilePage() {
   return (
     <MainLayout showNav={true}>
       <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Profile</h1>
-          <p className="mt-2 text-white/60">
-            Your account details (from database)
-          </p>
-        </div>
+        <PageHeader
+          title="Profile"
+          description="Your account details"
+        />
 
         <ProfileCard user={me} />
 

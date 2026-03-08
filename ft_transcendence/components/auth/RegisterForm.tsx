@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LoginErrorModal } from "@/components/auth/LoginErrorModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 
 export function RegisterForm() {
     const router = useRouter();
@@ -18,109 +18,106 @@ export function RegisterForm() {
 
     // realtime check passwordNotMatch
     const passwordNotMatch =
-        password.length > 0 &&
-        confirmPassword.length > 0 &&
-        password !== confirmPassword;
+      password.length > 0 &&
+      confirmPassword.length > 0 &&
+      password !== confirmPassword;
 
     async function onRegister() {
-        setHasSubmitted(true);
+      setHasSubmitted(true);
 
-        // basic validation
-        if (!email || !password || !confirmPassword) {
-            setModalMsg("Please fill in all fields.");
-            setModalOpen(true);
-            return;
+      // basic validation
+      if (!email || !password || !confirmPassword) {
+        setModalMsg("Please fill in all fields.");
+        setModalOpen(true);
+        return;
+      }
+
+      // password match check
+      if (password !== confirmPassword) {
+        setModalMsg("Password and confirm password do not match.");
+        setModalOpen(true);
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) {
+          setModalMsg(data?.message ?? "Registration failed. Please try again.");
+          setModalOpen(true);
+          return;
         }
 
-        // password match check
-        if (password !== confirmPassword) {
-            setModalMsg("Password and confirm password do not match.");
-            setModalOpen(true);
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const res = await fetch("/api/auth/register", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await res.json().catch(() => null);
-            if (!res.ok || !data?.ok) {
-                setModalMsg(data?.message ?? "Registration failed. Please try again.");
-                setModalOpen(true);
-                return;
-            }
-
-            // Automatically redirect to login or main.
-            // Since register sets the cookie (in my implementation above), we might skip to main?
-            // Wait, let's check `register/route.ts` again.
-            // Yes, I did `await setUserId(...)`. So we can go to main.
-            router.push("/main");
-        } catch {
-            setModalMsg("Network error. Please try again.");
-            setModalOpen(true);
-        } finally {
-            setSubmitting(false);
-        }
+        // Automatically redirect to login or main.
+        // Since register sets the cookie (in my implementation above), we might skip to main?
+        // Wait, let's check `register/route.ts` again.
+        // Yes, I did `await setUserId(...)`. So we can go to main.
+        router.push("/main");
+      } catch {
+        setModalMsg("Network error. Please try again.");
+        setModalOpen(true);
+      } finally {
+        setSubmitting(false);
+      }
     }
 
-    return (
-        <>
-            <div className="space-y-3">
-                <input
-                    className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/20 focus:bg-black/30 transition text-white"
-                    placeholder="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
-                <input
-                    className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/20 focus:bg-black/30 transition text-white"
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-                <div className="space-y-1">
-                    <input
-                        className={`w-full rounded-2xl px-4 py-3 text-white transition
-                            bg-black/20 border
-                            ${
-                                passwordNotMatch
-                                    ? "border-red-400/60"
-                                    : "border-white/10"
-                            }
-                        `}
-                        placeholder="Confirm Password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
+  return (
+    <>
+      <div className="space-y-3">
+        <input
+          className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/20 focus:bg-black/30 transition text-white"
+          placeholder="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/20 focus:bg-black/30 transition text-white"
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <div className="space-y-1">
+          <input
+            className={`w-full rounded-2xl px-4 py-3 text-white transition bg-black/20 border
+              ${ passwordNotMatch ? "border-red-400/60" : "border-white/10" }
+            `}
+            placeholder="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
 
-                    {passwordNotMatch && (
-                        <p className="text-sm text-red-400">
-                            Passwords do not match
-                        </p>
-                    )}
-                </div>
+          {passwordNotMatch && (
+            <p className="text-sm text-red-400">
+              Passwords do not match
+            </p>
+          )}
+        </div>
 
-                <button
-                    disabled={submitting}
-                    onClick={onRegister}
-                    className="w-full rounded-2xl bg-white text-zinc-950 font-semibold py-3 disabled:opacity-60 hover:opacity-90 transition mt-2"
-                >
-                    {submitting ? "Creating Account..." : "Register"}
-                </button>
-            </div>
+        <button
+          disabled={submitting}
+          onClick={onRegister}
+          className="w-full rounded-2xl bg-white text-zinc-950 font-semibold py-3 disabled:opacity-60 hover:opacity-90 transition mt-2"
+        >
+          {submitting ? "Creating Account..." : "Register"}
+        </button>
+      </div>
 
-            <LoginErrorModal
-                open={modalOpen}
-                message={modalMsg}
-                onClose={() => setModalOpen(false)}
-            />
-        </>
-    );
+      <AlertModal
+        open={modalOpen}
+        type="error"
+        title="Registration Failed"
+        message={modalMsg}
+        onClose={() => setModalOpen(false)}
+      />
+    </>
+  );
 }

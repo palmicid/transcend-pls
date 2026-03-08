@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LoginErrorModal } from "@/components/auth/LoginErrorModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 
 export function LoginForm() {
   const router = useRouter();
@@ -76,13 +76,12 @@ export function LoginForm() {
         </button>
       </div>
 
-      <LoginErrorModal
+      <AlertModal
         open={modalOpen}
+        type="error"
+        title="Login Failed"
         message={modalMsg}
-        onClose={() => {
-          setModalOpen(false);
-          if (oauthError) router.replace("/login");
-        }}
+        onClose={() => setModalOpen(false)}
       />
     </>
   );

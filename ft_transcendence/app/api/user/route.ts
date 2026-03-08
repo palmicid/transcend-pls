@@ -22,11 +22,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
 
+    //hash password
+    const hashedPassword = await bcrypt.hash(body.password, 12)
+
     const user = await prisma.user.create({
       data: {
         email: body.email,
         display_name: body.display_name,
-        password: body.password
+        password: hashedPassword,
         // password: bcrypt.hash(body.password, process.env())
       },
     })
@@ -34,7 +37,7 @@ export async function POST(req: Request) {
     return NextResponse.json(user, { status: 201 })
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError){
-      if (err.code == 'P2002') 
+      if (err.code == 'P2002')
         return NextResponse.json({ error: 'Email already exists.' }, { status: 409 })
     }
     return NextResponse.json(
