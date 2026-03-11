@@ -1,3 +1,5 @@
+import type { ProfileUser } from "@/types/profile";
+
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -7,7 +9,7 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ProfileInfoGrid({ user }: { user: Record<string, unknown> }) {
+export function ProfileInfoGrid({ user }: { user: ProfileUser }) {
   return (
     <section>
       <div className="mb-3 text-sm font-semibold text-white/80">

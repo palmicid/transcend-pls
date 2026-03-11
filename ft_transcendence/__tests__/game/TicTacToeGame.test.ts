@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import TicTacToeGame from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
+import TicTacToeGame from "@/lib/game/tic-tac-toe/TicTacToeGame";
 
 describe("TicTacToeGame", () => {
   let game: TicTacToeGame;

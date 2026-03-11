@@ -10,4 +10,9 @@ export type { RandomAdapter } from "./strategies/RandomStrategy";
 export { MinimaxStrategy } from "./strategies/MinimaxStrategy";
 export { RandomStrategy } from "./strategies/RandomStrategy";
 export { BotRegistry } from "./BotRegistry";
-export * from "./constants";
+export {
+	BOT_PLAYER_ID,
+	BOT_DIFFICULTIES,
+	DEFAULT_DIFFICULTY_DEPTH_MAP,
+} from "./constants";
+export type { BotDifficulty } from "./constants";

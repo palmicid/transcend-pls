@@ -46,12 +46,14 @@ export interface RoomInfo {
 // ROOM SNAPSHOT (for SSE/game state)
 // =============================================================================
 
+import type { BotDifficulty } from "@/lib/bot/constants";
+
 /**
  * Bot configuration in snapshots.
  */
 export interface BotConfig {
   role: string;
-  difficulty: number | null;
+  difficulty: BotDifficulty | null;
   delayMs: number;
 }
 

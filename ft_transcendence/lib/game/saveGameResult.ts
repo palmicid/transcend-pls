@@ -12,6 +12,7 @@ interface SaveGameResultParams {
   winnerRole: string | null;
   isDraw: boolean;
   startedAt: Date;
+  finalBoard?: unknown;
 }
 
 /**
@@ -24,11 +25,21 @@ interface SaveGameResultParams {
  * @returns The created GameResult or null if conditions not met
  */
 export async function saveGameResult(params: SaveGameResultParams) {
-  const { gameType, roomId, players, winnerRole, isDraw, startedAt } = params;
+  const { gameType, roomId, players, winnerRole, isDraw, startedAt, finalBoard } = params;
 
   // GUARD: Must have exactly 2 players
   if (players.length !== 2) {
     console.log("[saveGameResult] Skipped: Not exactly 2 players");
+    return null;
+  }
+
+  const existingResult = await prisma.gameResult.findFirst({
+    where: { room_id: roomId },
+    select: { id: true },
+  });
+
+  if (existingResult) {
+    console.log(`[saveGameResult] Skipped: Result already exists for room ${roomId}`);
     return null;
   }
 
@@ -62,6 +73,7 @@ export async function saveGameResult(params: SaveGameResultParams) {
         is_draw: isDraw,
         started_at: startedAt,
         duration_ms: Date.now() - new Date(startedAt).getTime(),
+        final_board: finalBoard as any,
       },
     });
 
