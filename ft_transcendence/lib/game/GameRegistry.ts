@@ -8,8 +8,8 @@
  */
 
 import { Game, GameConfig, GameState, PlayerSlot } from "@/lib/game";
-import TicTacToeGame from "@/app/play/tic-tac-toe/lib/TicTacToeGame";
-import Connect4Game from "@/app/play/connect4/lib/Connect4Game";
+import TicTacToeGame from "@/lib/game/tic-tac-toe/TicTacToeGame";
+import Connect4Game from "@/lib/game/connect4/Connect4Game";
 
 // =============================================================================
 // TYPES

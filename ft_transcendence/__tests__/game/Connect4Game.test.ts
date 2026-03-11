@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import Connect4Game from "@/app/play/connect4/lib/Connect4Game";
+import Connect4Game from "@/lib/game/connect4/Connect4Game";
 
 describe("Connect Four Game", () => {
   let game: Connect4Game;

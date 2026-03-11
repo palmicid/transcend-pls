@@ -100,7 +100,7 @@ model Room {
   winner_role  String?
 
   // Bot configuration
-  bot_difficulty Int? // null = no bot, 1 = Easy, 3 = Medium, 9 = Hard
+  bot_difficulty String? // null = no bot, "Easy" | "Medium" | "Hard"
   bot_role       String? // "X" or "O" - which slot the bot occupies
   bot_delay_ms   Int     @default(500) // Delay before bot moves (ms)
 
@@ -130,6 +130,7 @@ model GameResult {
 
   game_type String // "tic-tac-toe", "connect4"
   room_id   String? // Optional link to source Room
+  final_board Json?
 
   player1_id Int
   player1    User @relation("GamePlayer1", fields: [player1_id], references: [id])
@@ -149,4 +150,5 @@ model GameResult {
   @@index([player2_id])
   @@index([winner_id])
   @@index([game_type])
+  @@index([room_id])
 }

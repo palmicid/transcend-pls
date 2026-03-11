@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileInfoGrid } from "@/components/profile/ProfileInfoGrid";
+import { ProfileGameHistory } from "@/components/profile/ProfileGameHistory";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import type { ProfileUser } from "@/types/profile";
 
@@ -24,6 +25,7 @@ export function ProfileCard({ user }: { user: ProfileUser }) {
             }
           />
           <ProfileInfoGrid user={currentUser} />
+          <ProfileGameHistory user={currentUser} />
         </div>
       </Card>
 

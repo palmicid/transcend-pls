@@ -1,5 +1,5 @@
 /**
- * @file app/play/tic-tac-toe/sse/[roomId]/route.ts
+ * @file app/api/play/tic-tac-toe/sse/[roomId]/route.ts
  */
 
 import { createGameSSERouteHandler } from "@/lib/sse/createGameSSEHandler";

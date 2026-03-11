@@ -13,3 +13,9 @@ export {
   type SSEHandlerOptions,
   type SSEMessage,
 } from "./createSSEHandler";
+
+export {
+  parseGameSSEPayload,
+  type ParsedGameSSEPayload,
+  type GameRoomSnapshot,
+} from "./gameSSEUtils";

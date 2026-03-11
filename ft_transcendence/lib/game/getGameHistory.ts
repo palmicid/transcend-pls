@@ -7,15 +7,26 @@ import prisma from "@/lib/prisma";
 
 export type GameHistoryEntry = {
   id: number;
-  game_type: string;
-  room_id: string | null;
-  winner_id: number | null;
-  is_draw: boolean;
-  duration_ms: number | null;
-  started_at: Date;
-  ended_at: Date;
-  player1: { id: number; display_name: string };
-  player2: { id: number; display_name: string };
+  gameType: string;
+  roomId: string | null;
+  winnerId: number | null;
+  isDraw: boolean;
+  durationMs: number | null;
+  startedAt: Date;
+  endedAt: Date;
+  result: "win" | "loss" | "draw";
+  opponent: { id: number; displayName: string };
+  finalBoard: unknown;
+};
+
+export type PlayerStats = {
+  wins: number;
+  losses: number;
+  draws: number;
+  total: number;
+  winRate: number;
+  nonLossRate: number;
+  averageDurationMs: number | null;
 };
 
 /**
@@ -39,20 +50,44 @@ export async function getGameHistory(userId: number, options?: {
     include: {
       player1: { select: { id: true, display_name: true } },
       player2: { select: { id: true, display_name: true } },
-      winner: { select: { id: true, display_name: true } },
     },
     orderBy: { ended_at: "desc" },
     take: limit,
     skip: offset,
   });
 
-  return results as unknown as GameHistoryEntry[];
+  return results.map((result) => {
+    const player1 = result.player1;
+    const player2 = result.player2;
+    const opponent = player1.id === userId ? player2 : player1;
+
+    return {
+      id: result.id,
+      gameType: result.game_type,
+      roomId: result.room_id,
+      winnerId: result.winner_id,
+      isDraw: result.is_draw,
+      durationMs: result.duration_ms,
+      startedAt: result.started_at,
+      endedAt: result.ended_at,
+      result: result.is_draw
+        ? "draw"
+        : result.winner_id === userId
+          ? "win"
+          : "loss",
+      opponent: {
+        id: opponent.id,
+        displayName: opponent.display_name,
+      },
+      finalBoard: result.final_board,
+    };
+  });
 }
 
 /**
  * Get user's win/loss/draw stats.
  */
-export async function getPlayerStats(userId: number, gameType?: string) {
+export async function getPlayerStats(userId: number, gameType?: string): Promise<PlayerStats> {
   const games = await prisma.gameResult.findMany({
     where: {
       OR: [
@@ -64,15 +99,35 @@ export async function getPlayerStats(userId: number, gameType?: string) {
     select: {
       winner_id: true,
       is_draw: true,
+      duration_ms: true,
     },
   });
 
   let wins = 0, losses = 0, draws = 0;
+  let totalDurationMs = 0;
+  let completedDurations = 0;
+
   for (const game of games) {
     if (game.is_draw) draws++;
     else if (game.winner_id === userId) wins++;
     else losses++;
+
+    if (typeof game.duration_ms === "number") {
+      totalDurationMs += game.duration_ms;
+      completedDurations++;
+    }
   }
 
-  return { wins, losses, draws, total: games.length };
+  const total = games.length;
+
+  return {
+    wins,
+    losses,
+    draws,
+    total,
+    winRate: total === 0 ? 0 : Math.round((wins / total) * 100),
+    nonLossRate: total === 0 ? 0 : Math.round(((wins + draws) / total) * 100),
+    averageDurationMs:
+      completedDurations === 0 ? null : Math.round(totalDurationMs / completedDurations),
+  };
 }

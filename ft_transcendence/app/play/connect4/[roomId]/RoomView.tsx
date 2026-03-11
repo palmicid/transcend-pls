@@ -29,7 +29,7 @@ interface RoomViewProps {
 
 export default function RoomView({ roomId, userId, initialState }: RoomViewProps) {
   const router = useRouter();
-  const sseUrl = `/play/connect4/sse/${roomId}`;
+  const sseUrl = `/api/play/connect4/sse/${roomId}`;
   const { snapshot, isConnected, myRole, error: connectionError } = useGameSSE(
     roomId,
     sseUrl,
