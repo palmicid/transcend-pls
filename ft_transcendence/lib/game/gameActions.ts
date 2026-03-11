@@ -12,6 +12,130 @@ import { broadcaster } from "@/lib/broadcast";
 import { GameRegistry } from "@/lib/game/GameRegistry";
 import { getBotDisplayName } from "@/lib/bot/botHelpers";
 import { saveGameResult } from "@/lib/game/saveGameResult";
+import logger from "@/lib/logger";
+
+async function requestSaveOnGameEnd(
+	roomId: string,
+	gameId: string,
+	snapshot: { board?: unknown } | null,
+): Promise<void> {
+	if (!snapshot?.board) {
+		logger.debug({
+			msg: "Skipping game result save: missing board snapshot",
+			roomId,
+			gameId,
+		});
+		return;
+	}
+
+	const gameDef = GameRegistry.get(gameId);
+	if (!gameDef) {
+		logger.warn({
+			msg: "Skipping game result save: unknown game definition",
+			roomId,
+			gameId,
+		});
+		return;
+	}
+
+	const board = gameDef.parseBoard(snapshot.board);
+	const winner = gameDef.checkWin(board);
+	const isDraw = gameDef.checkDraw(board, winner);
+
+	if (!winner && !isDraw) {
+		logger.debug({
+			msg: "Skipping game result save: game has not ended",
+			roomId,
+			gameId,
+		});
+		return;
+	}
+
+	const [dbRoom, roomPlayers] = await Promise.all([
+		prisma.room.findUnique({ where: { id: roomId } }),
+		prisma.roomPlayer.findMany({
+			where: { room_id: roomId },
+			select: { user_id: true, role: true },
+		}),
+	]);
+
+	if (!dbRoom) {
+		logger.warn({
+			msg: "Skipping game result save: room not found",
+			roomId,
+			gameId,
+		});
+		return;
+	}
+
+	logger.info({
+		msg: "Attempting to persist game result",
+		roomId,
+		gameId,
+		winnerRole: winner,
+		isDraw,
+		playerCount: roomPlayers.length,
+	});
+
+	const persistedResult = await saveGameResult({
+		gameType: gameId,
+		roomId,
+		players: roomPlayers.map((p: { user_id: number; role: string }) => ({
+			id: p.user_id,
+			role: p.role,
+		})),
+		winnerRole: winner,
+		isDraw,
+		startedAt: dbRoom.created_at,
+		finalBoard: snapshot.board,
+	});
+
+	if (persistedResult) {
+		logger.info({
+			msg: "Game result persisted",
+			roomId,
+			gameId,
+			gameResultId: persistedResult.id,
+		});
+		return;
+	}
+
+	logger.info({
+		msg: "Game result not persisted due to guard conditions",
+		roomId,
+		gameId,
+	});
+}
+
+/**
+ * Single post-move handler used by both human and bot paths.
+ *
+ * Checks terminal state → transitions room → persists to DB →
+ * saves game result (if eligible) → broadcasts SSE event.
+ */
+async function finalizeMove(
+	roomId: string,
+	room: Room,
+	gameId: string,
+): Promise<void> {
+	const ended = room.isTerminal();
+
+	if (ended && room.status !== "ENDED") {
+		room.end();
+	}
+
+	await roomManager.persistStateToDb(roomId);
+
+	if (ended) {
+		await requestSaveOnGameEnd(roomId, gameId, room.getSnapshot() as any);
+	}
+
+	await broadcastRoomSnapshot(
+		roomId,
+		ended ? "game_end" : "game_move",
+		gameId,
+	);
+}
 
 export async function attachBotMoveCallback(
 	roomId: string,
@@ -22,21 +146,7 @@ export async function attachBotMoveCallback(
 	if (!game || typeof game.onBotMove === "undefined") return;
 
 	game.onBotMove = async () => {
-		const ended =
-			typeof game.checkEndConditions === "function"
-				? game.checkEndConditions()
-				: false;
-
-		if (ended && room.status !== "ENDED") {
-			room.end();
-		}
-
-		await roomManager.persistStateToDb(roomId);
-		await broadcastRoomSnapshot(
-			roomId,
-			ended ? "game_end" : "game_move",
-			gameId,
-		);
+		await finalizeMove(roomId, room, gameId);
 	};
 }
 
@@ -194,44 +304,17 @@ export async function submitGameMove(
 			return { ok: false, error: validation.error, snapshot: null };
 		}
 
-		// Submit to in-memory room
-		const success = await roomManager.submitAction(
-			roomId,
+		// Apply move to in-memory room (validate → apply → updateState)
+		const applied = room.submitAction(
 			session.userId.toString(),
 			action,
 		);
+		if (!applied) return { ok: false, error: "Move rejected", snapshot: null };
 
-		if (success) {
-			// Check win/draw using registry
-			const newSnapshot = room.getSnapshot() as any;
-			const newBoard = gameDef.parseBoard(newSnapshot.board);
-			const winner = gameDef.checkWin(newBoard);
-			const isDraw = gameDef.checkDraw(newBoard, winner);
+		// Single post-move path: end-check → persist → save result → broadcast
+		await finalizeMove(roomId, room, gameId);
 
-			// Save game result if game ended
-			if (winner || isDraw) {
-				const roomPlayers = await prisma.roomPlayer.findMany({
-					where: { room_id: roomId },
-					select: { user_id: true, role: true },
-				});
-
-				await saveGameResult({
-					gameType: gameId,
-					roomId,
-					players: roomPlayers.map((p: { user_id: number; role: string }) => ({
-						id: p.user_id,
-						role: p.role,
-					})),
-					winnerRole: winner,
-					isDraw,
-					startedAt: dbRoom.created_at,
-				});
-			}
-
-			await broadcastRoomSnapshot(roomId, "game_move", gameId);
-		}
-
-		return { ok: success, snapshot: room.getSnapshot() };
+		return { ok: true, snapshot: room.getSnapshot() };
 	} catch (error) {
 		console.error("Submit move failed:", error);
 		return { ok: false, error: "Server error", snapshot: null };

@@ -10,7 +10,7 @@ export async function GET(
 ){
   const { id } = await params
   try {
-    const user = await userService.getUserById(parseInt(id));
+    const user = await userService.getProfileById(parseInt(id));
     if (!user)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     return NextResponse.json(user, { status: 200 })
@@ -41,7 +41,7 @@ export async function PATCH(
     return NextResponse.json(updateUser, { status: 201 })
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError){
-      if (err.code == 'P2025') 
+      if (err.code == 'P2025')
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
     if (err instanceof PrismaClientValidationError)

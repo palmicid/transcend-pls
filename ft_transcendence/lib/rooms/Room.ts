@@ -208,8 +208,9 @@ export default class Room {
   /**
    * Submit a player action to the game.
    *
-   * Validates the action before processing. If the action causes the game
-   * to end, automatically transitions to ENDED state.
+   * Validates and applies the action. Does NOT check for end conditions
+   * or broadcast — the caller (e.g. GameFlowService / gameActions) is
+   * responsible for calling {@link isTerminal}, persisting, and broadcasting.
    *
    * @param playerId - The player making the action
    * @param action - The action payload (game-specific format)
@@ -221,14 +222,15 @@ export default class Room {
 
     this.game.playerAction(playerId, action);
     this.game.updateState();
-    this.broadcastSnapshot();
-
-    // Check if game ended
-    if (this.game.checkEndConditions()) {
-      this.end();
-    }
 
     return true;
+  }
+
+  /**
+   * Check whether the attached game has reached a terminal state (win or draw).
+   */
+  isTerminal(): boolean {
+    return this._game?.checkEndConditions() ?? false;
   }
 
   /**

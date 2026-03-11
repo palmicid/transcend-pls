@@ -1,14 +1,15 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { saveGameResult } from './saveGameResult';
-import prisma from '../../lib/prisma';
+import { saveGameResult } from '@/lib/game/saveGameResult';
+import prisma from '@/lib/prisma';
 
 // Mock Prisma
-vi.mock('../../lib/prisma', () => ({
+vi.mock('@/lib/prisma', () => ({
   default: {
     room: {
       findUnique: vi.fn(),
     },
     gameResult: {
+      findFirst: vi.fn(),
       create: vi.fn(),
     },
   },
@@ -30,6 +31,7 @@ describe('saveGameResult', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (prisma.gameResult.findFirst as any).mockResolvedValue(null);
   });
 
   it('should save result for 2-player remote game', async () => {
@@ -42,6 +44,11 @@ describe('saveGameResult', () => {
     (prisma.gameResult.create as any).mockResolvedValue({ id: 1 });
 
     const result = await saveGameResult(defaults);
+
+    expect(prisma.gameResult.findFirst).toHaveBeenCalledWith({
+      where: { room_id: 'room-1' },
+      select: { id: true },
+    });
 
     expect(prisma.room.findUnique).toHaveBeenCalledWith({
       where: { id: 'room-1' },
@@ -104,5 +111,33 @@ describe('saveGameResult', () => {
         is_draw: true,
       }),
     });
+  });
+
+  it('should save the final board snapshot when provided', async () => {
+    (prisma.room.findUnique as any).mockResolvedValue({
+      bot_difficulty: null,
+      bot_role: null,
+    });
+
+    await saveGameResult({
+      ...defaults,
+      finalBoard: ['X', 'O', 'X', null, 'O', null, 'X', null, 'O'],
+    });
+
+    expect(prisma.gameResult.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        final_board: ['X', 'O', 'X', null, 'O', null, 'X', null, 'O'],
+      }),
+    });
+  });
+
+  it('should NOT save if a result already exists for the room', async () => {
+    (prisma.gameResult.findFirst as any).mockResolvedValue({ id: 99 });
+
+    const result = await saveGameResult(defaults);
+
+    expect(prisma.room.findUnique).not.toHaveBeenCalled();
+    expect(prisma.gameResult.create).not.toHaveBeenCalled();
+    expect(result).toBeNull();
   });
 });

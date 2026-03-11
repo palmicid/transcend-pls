@@ -3,6 +3,7 @@
  * @description Shared helpers for game room views (TTT, Connect4, etc.).
  */
 
+import { BotDifficulty } from "@/lib/bot";
 import type { BotConfig, PlayerInfo, RoomStatus } from "@/types/game";
 
 export interface LobbyState {
@@ -83,13 +84,13 @@ export function createMoveHandler<TMove>(params: {
 
 export function createBotHandlers<TRole extends string>(params: {
   roomId: string;
-  setBotForSlot: (args: { roomId: string; role: TRole; difficulty: 1 | 3 | 9 }) => Promise<{ error?: string } | void>;
+  setBotForSlot: (args: { roomId: string; role: TRole; difficulty: BotDifficulty }) => Promise<{ error?: string } | void>;
   removeBotFromSlot: (roomId: string) => Promise<{ error?: string } | void>;
   onError?: (message: string) => void;
 }) {
   const { roomId, setBotForSlot, removeBotFromSlot, onError } = params;
 
-  const handleSetBot = async (role: TRole, difficulty: 1 | 3 | 9) => {
+  const handleSetBot = async (role: TRole, difficulty: BotDifficulty) => {
     const res = await setBotForSlot({ roomId, role, difficulty });
     if (res && res.error && onError) onError(res.error);
   };

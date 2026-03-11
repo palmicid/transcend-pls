@@ -130,6 +130,7 @@ model GameResult {
 
   game_type String // "tic-tac-toe", "connect4"
   room_id   String? // Optional link to source Room
+  final_board Json?
 
   player1_id Int
   player1    User @relation("GamePlayer1", fields: [player1_id], references: [id])
@@ -149,4 +150,5 @@ model GameResult {
   @@index([player2_id])
   @@index([winner_id])
   @@index([game_type])
+  @@index([room_id])
 }

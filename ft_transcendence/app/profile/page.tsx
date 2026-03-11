@@ -3,36 +3,16 @@ import { getSession } from "@/lib/auth/auth-session";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { userService } from "@/services/userService";
 
 export default async function ProfilePage() {
   const session = await getSession();
 
   if (!session?.userId) redirect("/login");
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/user/${session.userId}`,
-    {
-      cache: "no-store",
-      headers: {
-        Cookie: `session=${session.userId}`, // ส่ง cookie ไปด้วย
-      },
-    }
-  );
+  const me = await userService.getProfileById(session.userId);
 
-  if (!res.ok)
-    redirect("/login");
-
-  const raw = await res.json();
-  const me = {
-    id: raw.id,
-    email: raw.email,
-    displayName: raw.display_name,
-    avatarUrl: raw.avatar_url,
-    online: raw.online_status,
-    createdAt: raw.created_at,
-    isVerified: raw.is_verified,
-    use2FA: raw.use2FA,
-  };
+  if (!me) redirect("/login");
 
   return (
     <MainLayout showNav={true}>

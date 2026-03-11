@@ -2,8 +2,9 @@
  * @file app/play/tic-tac-toe/actions.ts
  * @description Server actions for Tic-Tac-Toe game and lobby management.
  *
- * Bot and broadcast helpers are intentionally imported from the shared
- * lib/game/gameActions module — do NOT add private copies here.
+ * Move / start / broadcast logic is delegated to the shared
+ * lib/game/gameActions module — game-specific files only contain
+ * lobby creation (custom room-id support) and bot/slot helpers.
  */
 
 "use server";
@@ -15,7 +16,8 @@ import { broadcaster } from "@/lib/broadcast";
 import { roomManager } from "@/lib/rooms";
 import TicTacToeGame from "@/lib/game/tic-tac-toe/TicTacToeGame";
 import {
-	attachBotMoveCallback,
+	submitGameMove,
+	startGame,
 	broadcastRoomSnapshot,
 } from "@/lib/game/gameActions";
 import type { BotDifficulty } from "@/lib/bot/constants";
@@ -64,91 +66,18 @@ export async function createTicTacToeRoom(roomId?: string) {
 	}
 }
 
-export async function getRoomMeta(roomId: string) {
-	const room = await prisma.room.findUnique({
-		where: { id: roomId },
-		include: {
-			owner: { select: { id: true, display_name: true } },
-			players: { select: { user_id: true, role: true } },
-		},
-	});
-
-	if (!room) return null;
-
-	return {
-		id: room.id,
-		game_type: room.game_type,
-		status: room.status,
-		owner: room.owner,
-		players: room.players,
-		board_state: room.board_state,
-		current_turn: room.current_turn,
-	};
-}
-
 // =============================================================================
-// GAME ACTIONS
+// GENERIC ROOM ACTIONS (delegated to shared helpers)
 // =============================================================================
 
-export async function submitTicTacToeMove(
+export const submitTicTacToeMove = async (
 	roomId: string,
-	playerId: string,
+	_playerId: string,
 	cell: number,
-) {
-	const session = await getSession();
-	if (!session) {
-		return { ok: false, snapshot: null };
-	}
+) => await submitGameMove(roomId, { cell }, "tic-tac-toe");
 
-	try {
-		const room = await loadAndValidateRoom(roomId);
-		if (!room) {
-			return { ok: false, snapshot: null };
-		}
-
-		attachBotMoveCallback(roomId, room, "tic-tac-toe");
-
-		const success = await roomManager.submitAction(
-			roomId,
-			session.userId.toString(),
-			{ cell },
-		);
-
-		if (success) {
-			await broadcastRoomSnapshot(roomId, "game_move", "tic-tac-toe");
-		}
-
-		return { ok: success, snapshot: room.getSnapshot() };
-	} catch (error) {
-		console.error("Failed to submit move:", error);
-		return { ok: false, snapshot: null };
-	}
-}
-
-export async function startTicTacToeGame(roomId: string) {
-	const session = await getSession();
-	if (!session) {
-		return { ok: false };
-	}
-
-	try {
-		const room = await loadAndValidateRoom(roomId);
-		if (!room) return { ok: false };
-
-		attachBotMoveCallback(roomId, room, "tic-tac-toe");
-
-		const started = await roomManager.start(roomId);
-
-		if (started) {
-			await broadcastRoomSnapshot(roomId, "game_start", "tic-tac-toe");
-		}
-
-		return { ok: started };
-	} catch (error) {
-		console.error("Failed to start game:", error);
-		return { ok: false };
-	}
-}
+export const startTicTacToeGame = async (roomId: string) =>
+	await startGame(roomId, "tic-tac-toe");
 
 // =============================================================================
 // BOT ACTIONS

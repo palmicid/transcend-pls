@@ -342,7 +342,7 @@ export default class TicTacToeGame extends Game<
 		if (data.bot_role && data.bot_difficulty) {
 			this.configureBot(
 				data.bot_role as "X" | "O",
-				data.bot_difficulty as BotDifficulty,
+				data.bot_difficulty as unknown as BotDifficulty,
 				data.bot_delay_ms ?? 500,
 			);
 		}
@@ -458,6 +458,8 @@ export default class TicTacToeGame extends Game<
 			gameType: this.type,
 			result: this.result,
 		});
+
+
 	}
 
 	/**

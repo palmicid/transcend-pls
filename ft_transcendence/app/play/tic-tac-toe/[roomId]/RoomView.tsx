@@ -32,7 +32,7 @@ interface RoomViewProps {
 
 export default function RoomView({ roomId, userId, gameType, initialState }: RoomViewProps) {
   const router = useRouter();
-  const sseUrl = `/play/tic-tac-toe/sse/${roomId}`;
+  const sseUrl = `/api/play/tic-tac-toe/sse/${roomId}`;
   const { snapshot, isConnected, myRole, error: connectionError } = useGameSSE(
     roomId,
     sseUrl,

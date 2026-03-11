@@ -1,5 +1,5 @@
 /**
- * @file app/play/connect4/sse/[roomId]/route.ts
+ * @file app/api/play/connect4/sse/[roomId]/route.ts
  */
 
 import { createGameSSERouteHandler } from "@/lib/sse/createGameSSEHandler";
