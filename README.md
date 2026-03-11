@@ -76,9 +76,15 @@ This project also emphasizes frontend quality and user experience. A custom-made
 
 - Responsibility 1
 
-### scharuka (Role)
+### scharuka (DevOps & AI Integration)
 
-- Responsibility 1
+- Set up the initial project infrastructure and development environment
+- Designed and implemented the Docker-based architecture for the project
+- Configured containerized services and orchestration using Docker and Make
+- Implemented HTTPS support for the application to ensure secure communication
+- Integrated an AI chat feature powered by a local Ollama model
+- Developed backend logic to communicate with the Ollama model and stream responses to the frontend
+- Ensured the system could run consistently in both development and production environments
 
 ## Project Management
 
@@ -188,6 +194,12 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Implemented delayed player eviction and reconnection grace logic to preserve gameplay continuity
 - Implemented by **kkaiyawo**
 
+### Implement a complete LLM system interface
+- Communication between the application backend and the Ollama API
+- Streaming responses from the model to the user interface
+- Error handling for model availability and request failures
+- Local AI inference without external API dependencies
+
 ## Module
 
 - List of all chosen modules (Major and Minor).
@@ -208,8 +220,9 @@ This project also emphasizes frontend quality and user experience. A custom-made
 | Major | Gaming and user experience | Remote players - Enable two players on separate computers to play the same game in real-time. | 2 pts | kkaiyawo |
 | Major | Gaming and user experience | Add another game with user history and matchmaking | 2 pts | kkaiyawo |
 | Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
+| Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
 
-Total points from these modules: **13 points**
+Total points from these modules: **15 points**
 
 ---
 
