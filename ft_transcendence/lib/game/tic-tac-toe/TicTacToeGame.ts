@@ -16,7 +16,7 @@
  * const game = new TicTacToeGame();
  * game.init();
  * game.handlePlayerConnect('player-1'); // Gets X
- * game.configureBot('O', 9); // Add hard bot as O
+ * game.configureBot('O', 'Hard'); // Add hard bot as O
  * game.startGame();
  * game.playerAction('player-1', { cell: 4 }); // X marks center
  * // Bot will respond automatically via scheduleBotMoveIfNeeded()
