@@ -154,7 +154,7 @@ async function fetchWithBearerToken(url: string, token_data: TokenResponse): Pro
   return res;
 }
 
-export function redirectWithError(message: string, req: Request) {
+export function redirectWithError(message: string, baseUrl: string) {
   const errorParam = encodeURIComponent(message);
-  return NextResponse.redirect(new URL(`/login?error=${errorParam}`, req.url));
+  return NextResponse.redirect(new URL(`/login?error=${errorParam}`, baseUrl));
 }
