@@ -3,7 +3,7 @@
  * @description Shared helpers for game room views (TTT, Connect4, etc.).
  */
 
-import { BotDifficulty } from "@/lib/bot";
+import type { BotDifficulty } from "@/lib/bot";
 import type { BotConfig, PlayerInfo, RoomStatus } from "@/types/game";
 
 export interface LobbyState {
