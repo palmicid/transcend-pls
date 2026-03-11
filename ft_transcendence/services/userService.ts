@@ -9,11 +9,17 @@ export const userUpdateSchema = z.object({
     display_name: z
         .string()
         .min(1, {message: "display_name must be at least 1 character"})
-        .max(16, {message: "display_name must be less than 17 characters"}),
+        .max(16, {message: "display_name must be less than 17 characters"})
+        .optional(),
     password: z
         .string()
         .min(4, {message: "password must be at least 4 characters"})
-        .regex(/^[\x21-\x7E]+$/, "Password contains invalid characters"),
+        .regex(/^[\x21-\x7E]+$/, "Password contains invalid characters")
+        .optional(),
+    online_status: z.boolean("Invalid online_status value").optional(),
+    is_verified: z.boolean("Invalid is_verified value").optional(),
+    use2FA: z.boolean("Invalid use2FA value").optional(),
+
 });
 
 export const userService = {
