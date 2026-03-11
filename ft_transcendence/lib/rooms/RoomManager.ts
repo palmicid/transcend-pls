@@ -15,7 +15,7 @@
  * ```ts
  * import { roomManager } from '@/lib/rooms';
  * import { broadcaster } from '@/lib/broadcast';
- * import TicTacToeGame from '@/app/game/tic-tac-toe/TicTacToeGame';
+ * import TicTacToeGame from '@/lib/game/tic-tac-toe/TicTacToeGame';
  *
  * // Create a room with a game
  * const game = new TicTacToeGame();
@@ -33,6 +33,8 @@
 
 import { Game, GameConfig, GameState, PlayerSlot } from "@/lib/game";
 import { Broadcaster } from "@/lib/broadcast";
+import prisma from "@/lib/prisma";
+import type { BotDifficulty } from "@/lib/bot/constants";
 import Room from "./Room";
 import { State } from "./RoomState";
 
@@ -72,6 +74,32 @@ class RoomManager {
   // ===========================================================================
   // ROOM LIFECYCLE
   // ===========================================================================
+
+  /**
+   * Delete OPEN rooms for the given game type that have been idle longer than
+   * the given age (default 2 hours). Destroys in-memory state first, then
+   * removes from DB.
+   */
+  async cleanupStaleRooms(
+    gameType: string,
+    maxAgeMs = 2 * 60 * 60 * 1000,
+  ): Promise<void> {
+    const cutoff = new Date(Date.now() - maxAgeMs);
+
+    const staleRooms = await prisma.room.findMany({
+      where: { game_type: gameType, status: "OPEN", created_at: { lt: cutoff } },
+      select: { id: true },
+    });
+
+    if (staleRooms.length === 0) return;
+
+    const staleIds = staleRooms.map((r: { id: string }) => r.id);
+    for (const id of staleIds) {
+      this.rooms.delete(id);
+    }
+
+    await prisma.room.deleteMany({ where: { id: { in: staleIds } } });
+  }
 
   /**
    * Create or get an existing room.
@@ -142,10 +170,11 @@ class RoomManager {
     roomId: string,
     game: Game<GameConfig, GameState, PlayerSlot>,
     broadcaster?: Broadcaster,
-    ownerId?: string
+    ownerId?: string,
+    initialState?: unknown
   ): Room {
     const room = this.ensureRoom(roomId, broadcaster, ownerId);
-    room.attachGame(game);
+    room.attachGame(game, initialState);
     return room;
   }
 
@@ -189,9 +218,19 @@ class RoomManager {
    * @param action - The action payload
    * @returns true if the action was valid and processed
    */
-  submitAction(roomId: string, playerId: string, action: unknown): boolean {
+  async submitAction(
+    roomId: string,
+    playerId: string,
+    action: unknown,
+  ): Promise<boolean> {
     const room = this.rooms.get(roomId);
-    return room ? room.submitAction(playerId, action) : false;
+    if (!room) return false;
+
+    const ok = room.submitAction(playerId, action);
+    if (!ok) return false;
+
+    await this.persistStateToDb(roomId);
+    return true;
   }
 
   /**
@@ -200,9 +239,15 @@ class RoomManager {
    * @param roomId - The room ID
    * @returns true if the game was started
    */
-  start(roomId: string): boolean {
+  async start(roomId: string): Promise<boolean> {
     const room = this.rooms.get(roomId);
-    return room ? room.start() : false;
+    if (!room) return false;
+
+    const started = room.start();
+    if (!started) return false;
+
+    await this.persistStateToDb(roomId);
+    return true;
   }
 
   /**
@@ -236,6 +281,210 @@ class RoomManager {
   reset(roomId: string): boolean {
     const room = this.rooms.get(roomId);
     return room ? room.reset() : false;
+  }
+
+  // ===========================================================================
+  // PERSISTENCE
+  // ===========================================================================
+
+  /**
+   * Create a room record in Prisma.
+   */
+  async createRoomRecord(params: {
+    id: string;
+    gameType: string;
+    ownerId: number;
+    maxPlayers: number;
+    boardState: unknown;
+    currentTurn: string;
+  }): Promise<{ id: string }> {
+    const room = await prisma.room.create({
+      data: {
+        id: params.id,
+        game_type: params.gameType,
+        owner_id: params.ownerId,
+        max_players: params.maxPlayers,
+        status: "OPEN",
+        board_state: params.boardState as any,
+        current_turn: params.currentTurn,
+      },
+      select: { id: true },
+    });
+
+    return room;
+  }
+
+  /**
+   * Delete a room from Prisma and evict it from memory.
+   */
+  async deleteRoomRecord(roomId: string): Promise<boolean> {
+    const deleted = await prisma.room.deleteMany({ where: { id: roomId } });
+    this.destroyRoom(roomId);
+    return deleted.count > 0;
+  }
+
+  /**
+   * Persist the room wrapper state and current game snapshot into Prisma.
+   */
+  async persistStateToDb(
+    roomId: string,
+    extraData?: Record<string, unknown>,
+  ): Promise<void> {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const snapshot = room.getSnapshot() as
+      | { board?: unknown; currentTurn?: string | null; winner?: string | null }
+      | null;
+
+    const winner = snapshot?.winner ?? null;
+
+    await prisma.room.update({
+      where: { id: roomId },
+      data: {
+        status: room.status,
+        board_state: snapshot?.board ?? null,
+        current_turn: winner ? null : (snapshot?.currentTurn ?? null),
+        winner_role: winner,
+        ...(extraData ?? {}),
+      },
+    });
+  }
+
+  /**
+   * Configure bot in-memory and persist bot config in Prisma.
+   */
+  async configureBot(
+    roomId: string,
+    params: {
+      role: string | null;
+      difficulty: BotDifficulty | null;
+      delayMs?: number;
+    },
+  ): Promise<boolean> {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    const game = room.game as any;
+    if (!game || typeof game.configureBot !== "function") return false;
+
+    game.configureBot(params.role, params.difficulty, params.delayMs ?? 500);
+
+    const patch: Record<string, unknown> = {
+      bot_role: params.role,
+      bot_difficulty: params.difficulty,
+    };
+    if (typeof params.delayMs === "number") {
+      patch.bot_delay_ms = params.delayMs;
+    }
+
+    await this.persistStateToDb(roomId, patch);
+    return true;
+  }
+
+  /**
+   * Switch player role in-memory and persist the updated RoomPlayer role.
+   */
+  async switchPlayerRole(
+    roomId: string,
+    userId: number,
+    targetRole: string,
+  ): Promise<boolean> {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    const game = room.game as any;
+    const playerslot = game?.playerslot;
+    if (!playerslot || typeof playerslot.switchTo !== "function") return false;
+
+    const success = playerslot.switchTo(userId.toString(), targetRole);
+    if (!success) return false;
+
+    await prisma.roomPlayer.update({
+      where: { room_id_user_id: { room_id: roomId, user_id: userId } },
+      data: { role: targetRole },
+    });
+
+    return true;
+  }
+
+  /**
+   * Ensure a player's slot assignment is applied in-memory and persisted in Prisma.
+   * Returns the assigned role, or null if assignment failed.
+   */
+  async ensurePlayerMembership(
+    roomId: string,
+    userId: number,
+  ): Promise<string | null> {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.game) return null;
+
+    const userIdStr = userId.toString();
+
+    const existingRole = room.game.getPlayerRole(userIdStr);
+    const hadRole = existingRole && existingRole !== "spectator";
+
+    if (!hadRole) {
+      const added = room.addPlayer(userIdStr);
+      if (!added) return null;
+    }
+
+    const role = room.game.getPlayerRole(userIdStr);
+    if (!role || role === "spectator") return null;
+
+    await prisma.roomPlayer.upsert({
+      where: { room_id_user_id: { room_id: roomId, user_id: userId } },
+      update: { role },
+      create: { room_id: roomId, user_id: userId, role },
+    });
+
+    await this.persistStateToDb(roomId);
+    return role;
+  }
+
+  /**
+   * Remove player membership in-memory and in Prisma in one operation.
+   */
+  async removePlayerMembership(
+    roomId: string,
+    userId: number,
+  ): Promise<boolean> {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    const removed = room.removePlayer(userId.toString());
+    if (!removed) return false;
+
+    await prisma.roomPlayer.deleteMany({
+      where: { room_id: roomId, user_id: userId },
+    });
+
+    // If room was waiting and no longer has enough players, drop back to OPEN.
+    if (room.game && room.status === State.READY && !room.game.isReady2Start) {
+      room.setStatus(State.OPEN);
+    }
+
+    await this.persistStateToDb(roomId);
+    return true;
+  }
+
+  /**
+   * Remove player membership even when the room is not currently hydrated.
+   */
+  async removePlayerMembershipSafe(
+    roomId: string,
+    userId: number,
+  ): Promise<boolean> {
+    const room = this.rooms.get(roomId);
+    if (room) {
+      return this.removePlayerMembership(roomId, userId);
+    }
+
+    await prisma.roomPlayer.deleteMany({
+      where: { room_id: roomId, user_id: userId },
+    });
+
+    return true;
   }
 
   // ===========================================================================

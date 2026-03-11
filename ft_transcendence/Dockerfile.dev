@@ -1,0 +1,25 @@
+# Development Dockerfile for Next.js with hot reloading
+FROM node:20-alpine
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies (including devDependencies)
+RUN npm install
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+EXPOSE 3000
+
+# Run in development mode with hot reloading
+CMD ["npm", "run", "dev"]

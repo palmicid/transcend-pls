@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import TicTacToePlayerSlot from "@/app/game/tic-tac-toe/TicTacToePlayerSlot";
+import TicTacToePlayerSlot from "@/lib/game/tic-tac-toe/TicTacToePlayerSlot";
 
 describe("TicTacToePlayerSlot", () => {
   let slots: TicTacToePlayerSlot;

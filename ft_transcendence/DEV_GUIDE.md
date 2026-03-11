@@ -73,7 +73,7 @@ import { Game, GameConfig, GameState, PlayerSlot } from "@/lib/game";
 import { createSSEHandler } from "@/lib/sse";
 
 // Authentication
-import { getUserId, requireAuth } from "@/lib/auth";
+import { getSession, requireAuth } from "@/lib/auth";
 ```
 
 ## Prerequisites
@@ -156,7 +156,7 @@ The app will be available at: **<http://localhost:3000>**
 
 ### Adding a New Game
 
-1. Create folder: `app/game/[game-name]/`
+1. Create folder: `app/play/[game-name]/`
 2. Implement:
    - `[GameName]Config.ts` - implements `GameConfig`
    - `[GameName]State.ts` - implements `GameState`

@@ -1,9 +1,15 @@
+# Base docker-compose configuration
+# Use with overlays: docker-compose.dev.yml, docker-compose.prod.yml, docker-compose.ollama.yml
+
 services:
   web:
     container_name: nextjs-app
     build: .
     ports:
-      - "3000:3000"
+      # - "3000:3000"
+      - "51212:51212" # for Prisma studio
+    expose:
+      - 3000
     env_file:
       - .env
     depends_on:
@@ -23,17 +29,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  ollama:
-    container_name: ollama
-    build: ./ollama
+  minio:
+    container_name: minio
+    image: minio/minio:latest
     ports:
-      - "11434:11434"
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      - OLLAMA_MODEL=llama3
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     volumes:
-      - ollama:/root/.ollama
+      - minio_data:/data
+    command: server /data --console-address ":9001"
     restart: unless-stopped
 
 volumes:
   postgres_data:
-  ollama:
+  minio_data:

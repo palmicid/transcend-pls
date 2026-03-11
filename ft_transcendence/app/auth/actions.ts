@@ -1,6 +1,7 @@
 "use server";
 
-import { setUserId, clearUserId } from "@/lib/auth";
+import { setUserId, clearUserId } from "@/lib/auth/auth-session";
+import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
 /**
@@ -13,16 +14,17 @@ export async function loginUser(userId: string): Promise<void> {
     throw new Error("User ID cannot be empty");
   }
 
-  // Normalize userId (trim whitespace, convert to lowercase for consistency)
-  const normalizedUserId = userId.trim().toLowerCase();
+  const parsedUserId = Number.parseInt(userId.trim(), 10);
+  if (Number.isNaN(parsedUserId) || parsedUserId <= 0) {
+    throw new Error("User ID must be a positive number");
+  }
 
-  // In a real app, you would:
-  // 1. Check if user exists in database
-  // 2. If not, create a new user
-  // 3. Validate credentials
-  // For now, we just store the userId in a session cookie
+  const user = await prisma.user.findUnique({ where: { id: parsedUserId } });
+  if (!user) {
+    throw new Error("User not found");
+  }
 
-  await setUserId(normalizedUserId);
+  await setUserId(parsedUserId);
   redirect("/lobby");
 }
 

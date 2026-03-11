@@ -44,7 +44,7 @@ export default class Room {
   private broadcaster: Broadcaster | null;
 
   /** The game instance (null until attached) */
-  private game: Game<GameConfig, GameState, PlayerSlot> | null;
+  private _game: Game<GameConfig, GameState, PlayerSlot> | null;
 
   /** Room lifecycle state machine */
   private state: RoomState;
@@ -67,7 +67,7 @@ export default class Room {
     this.id = id;
     this.broadcaster = broadcaster;
     this.state = new RoomState();
-    this.game = null;
+    this._game = null;
     this.ownerId = ownerId;
   }
 
@@ -92,15 +92,23 @@ export default class Room {
 
   /** Get the game type if a game is attached */
   get gameType(): string | null {
-    return this.game?.type ?? null;
+    return this._game?.type ?? null;
   }
 
   /** Get the number of players currently in the room */
   get playerCount(): number {
-    if (!this.game) return 0;
-    const snapshot = this.game.Snapshot as { players?: Record<string, string | null> } | null;
+    if (!this._game) return 0;
+    const snapshot = this._game.Snapshot as { players?: Record<string, string | null> } | null;
     if (!snapshot?.players) return 0;
     return Object.values(snapshot.players).filter((p) => p !== null).length;
+  }
+
+  /**
+   * Get the attached game instance.
+   * Exposed for external access (e.g., server actions configuring bot).
+   */
+  get game(): Game<GameConfig, GameState, PlayerSlot> | null {
+    return this._game;
   }
 
   // ===========================================================================
@@ -134,11 +142,12 @@ export default class Room {
    * initialized before attaching.
    *
    * @param game - The game instance to attach
+   * @param initialState - Optional state to restore
    */
-  attachGame(game: Game<GameConfig, GameState, PlayerSlot>): void {
-    this.game = game;
-    this.game.loadConfig();
-    this.game.loadState();
+  attachGame(game: Game<GameConfig, GameState, PlayerSlot>, initialState?: unknown): void {
+    this._game = game;
+    this._game.loadConfig();
+    this._game.loadState(initialState);
   }
 
   // ===========================================================================
@@ -199,8 +208,9 @@ export default class Room {
   /**
    * Submit a player action to the game.
    *
-   * Validates the action before processing. If the action causes the game
-   * to end, automatically transitions to ENDED state.
+   * Validates and applies the action. Does NOT check for end conditions
+   * or broadcast — the caller (e.g. GameFlowService / gameActions) is
+   * responsible for calling {@link isTerminal}, persisting, and broadcasting.
    *
    * @param playerId - The player making the action
    * @param action - The action payload (game-specific format)
@@ -212,14 +222,15 @@ export default class Room {
 
     this.game.playerAction(playerId, action);
     this.game.updateState();
-    this.broadcastSnapshot();
-
-    // Check if game ended
-    if (this.game.checkEndConditions()) {
-      this.end();
-    }
 
     return true;
+  }
+
+  /**
+   * Check whether the attached game has reached a terminal state (win or draw).
+   */
+  isTerminal(): boolean {
+    return this._game?.checkEndConditions() ?? false;
   }
 
   /**
@@ -239,14 +250,35 @@ export default class Room {
    * Start the game.
    *
    * Transitions from READY to IN_GAME state and starts the game loop.
+   * If the game is ready (e.g., bot games with 1 human) but still in OPEN
+   * state, automatically transitions to READY first.
    *
    * @returns true if the game was started successfully
    */
   start(): boolean {
-    if (!this.game) return false;
-    if (!this.state.transitionTo(State.IN_GAME)) return false;
+    if (!this._game) {
+      return false;
+    }
 
-    this.game.startGame();
+    // Check if game is ready (handles bot games properly)
+    if (!this._game.isReady2Start) {
+      return false;
+    }
+
+    // If game is ready but still in OPEN state, transition to READY first
+    // This handles bot games where configureBot() was called without addPlayer()
+    if (this.state.current === State.OPEN) {
+      if (!this.state.transitionTo(State.READY)) {
+        return false;
+      }
+    }
+
+    // Now transition from READY to IN_GAME
+    if (!this.state.transitionTo(State.IN_GAME)) {
+      return false;
+    }
+
+    this._game.startGame();
     this.broadcastSnapshot();
     return true;
   }
@@ -291,12 +323,41 @@ export default class Room {
    * @returns true if the reset was successful
    */
   reset(): boolean {
-    const ok = this.state.transitionTo(State.OPEN);
-    if (ok && this.game) {
-      this.game.init();
-      this.broadcastSnapshot();
+    if (!this.game) return false;
+    // We expect the game to handle its own reset or for the room flow to re-create it.
+    // simpler: just transition to OPEN. The game implementation should handle reset capability if needed.
+    // Ideally we should re-instantiate the game, but Room doesn't hold the factory.
+    // For now, let's assume the game can be reset or we just set status to OPEN and let players trigger new game start which re-inits.
+
+    if (!this.state.transitionTo(State.OPEN)) return false;
+
+    // If the game has a reset method, call it.
+    // But Game interface might not have reset.
+    // We'll leave it as state transition for now.
+
+    this.broadcastSnapshot();
+    return true;
+  }
+
+  /**
+   * Force set the room status (for restoration).
+   *
+   * @param status - The status to set
+   */
+  setStatus(status: State): void {
+    if (this.state.current !== status) {
+        this.state.forceTransition(status);
     }
-    return ok;
+  }
+
+  /**
+   * Restore room status from DB.
+   */
+  restoreStatus(statusStr: string): void {
+      const status = statusStr as State;
+      if (Object.values(State).includes(status)) {
+          this.setStatus(status);
+      }
   }
 
   // ===========================================================================
@@ -323,6 +384,28 @@ export default class Room {
     this.broadcaster.removeListener(this.id, listener);
   }
 
+  /**
+   * Broadcast a custom event to all room subscribers.
+   *
+   * @param event - Event name
+   * @param data - Event payload
+   */
+  public broadcast(event: string, data: any): void {
+    if (!this.broadcaster) return;
+
+    const payload = {
+      roomId: this.id,
+      event,
+      ...data,
+      // Always include current room/game metadata for context
+      status: this.state.current,
+      gameType: this.game?.type,
+      snapshot: this.game?.Snapshot,
+    };
+
+    this.broadcaster.broadcast(this.id, JSON.stringify(payload));
+  }
+
   // ===========================================================================
   // PRIVATE HELPERS
   // ===========================================================================
@@ -331,16 +414,7 @@ export default class Room {
    * Broadcast the current game snapshot to all subscribers.
    */
   private broadcastSnapshot(): void {
-    if (!this.broadcaster || !this.game) return;
-
-    const payload = {
-      roomId: this.id,
-      state: this.state.current,
-      gameType: this.game.type,
-      snapshot: this.game.Snapshot,
-      event: "snapshot",
-    };
-
-    this.broadcaster.broadcast(this.id, JSON.stringify(payload));
+    this.broadcast("snapshot", {});
   }
+
 }

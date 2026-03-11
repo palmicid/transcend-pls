@@ -20,7 +20,7 @@ describe("Health API", () => {
       const response = await GET();
       const data = await response.json();
 
-      expect(data.service).toBe("pong-server");
+      expect(data.service).toBe("transcendence-game-server");
     });
 
     it("should return valid timestamp", async () => {

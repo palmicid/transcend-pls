@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import Room from "@/lib/rooms/Room";
 import { State } from "@/lib/rooms/RoomState";
-import TicTacToeGame from "@/app/game/tic-tac-toe/TicTacToeGame";
+import TicTacToeGame from "@/lib/game/tic-tac-toe/TicTacToeGame";
 import type { Broadcaster } from "@/lib/broadcast";
 
 // Mock broadcaster
@@ -204,11 +204,17 @@ describe("Room", () => {
         expect(room.status).toBe(State.IN_GAME);
       });
 
-      it("should fail from OPEN state", () => {
+      it("should auto-transition from OPEN to READY if game is ready", () => {
         const openRoom = new Room("open", broadcaster);
         openRoom.attachGame(game);
+        // Game needs players to be ready - add one
+        game.handlePlayerConnect("player-1");
+        game.handlePlayerConnect("player-2");
+        
+        // Now start should succeed and auto-transition
         const result = openRoom.start();
-        expect(result).toBe(false);
+        expect(result).toBe(true);
+        expect(openRoom.status).toBe(State.IN_GAME);
       });
     });
 
