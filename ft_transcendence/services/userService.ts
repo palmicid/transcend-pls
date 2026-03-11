@@ -12,7 +12,19 @@ export const userService = {
     },
     async getProfileById(userId: number): Promise<ProfileUser | null> {
         const [user, recentGames, stats] = await Promise.all([
-            prisma.user.findUnique({ where: { id: userId } }),
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    email: true,
+                    display_name: true,
+                    avatar_url: true,
+                    online_status: true,
+                    created_at: true,
+                    is_verified: true,
+                    use2FA: true,
+                },
+            }),
             getGameHistory(userId, { limit: 5 }),
             getPlayerStats(userId),
         ]);
