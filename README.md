@@ -355,6 +355,26 @@ Implemented real-time updates using SSE (a WebSocket-like streaming technology) 
 
 **Contributor:** kkaiyawo
 
+## 9. Implement a complete LLM system interface
+
+**Type:** Major
+**Category:** Artificial Intelligence
+**Points:** 2
+
+#### Justification
+An AI-powered chat feature was integrated to allow users to interact with a locally hosted large language model. This improves the user experience and demonstrates integration of modern AI systems into a web application.
+
+#### Implementation
+A chat interface was implemented where users can send messages to a backend endpoint. The backend communicates with a locally running **Ollama** model, processes the user input, and streams the model response back to the frontend.
+
+The system includes:
+- Communication between the application backend and the Ollama API
+- Streaming responses from the model to the user interface
+- Error handling for model availability and request failures
+- Local AI inference without external API dependencies
+
+**Contributor:** scharuka
+
 ## Indeividual Contributions
 
 - Detailed breakdown of what each team member contributed.
