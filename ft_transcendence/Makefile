@@ -135,7 +135,7 @@ build-no-ollama: ## Build Docker images without Ollama
 .PHONY: stop
 stop: ## Stop all running containers
 	@echo "$(YELLOW)⏹️  Stopping all containers...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down --remove-orphans
 	@echo "$(GREEN)✅ All containers stopped$(RESET)"
 
 .PHONY: restart
