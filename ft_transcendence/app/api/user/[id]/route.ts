@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from "@prisma/client/runtime/client"
 import { userService } from "@/services/userService"
+import bcrypt from "bcryptjs";
 
 // Get user by ID
 export async function GET(
@@ -31,6 +32,8 @@ export async function PATCH(
   const { id } = await params
   try {
     const body = await _request.json();
+    if (body.password)
+      body.password = await bcrypt.hash(body.password, 12);
     const updateUser = await prisma.user.update({
       where: {
         id: parseInt(id),

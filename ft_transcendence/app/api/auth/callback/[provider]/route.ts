@@ -23,9 +23,12 @@ export async function GET(
   const { provider } = await params;
   const { searchParams } = new URL(req.url);
   const strategy = STRATEGIES[provider];
-
-  if (!strategy) return redirectWithError("Provider not supported", req);
-
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const protocol = req.headers.get("x-forwarded-proto") || "https";
+  const baseUrl = `${protocol}://${host}`;
+  
+  if (!strategy) return redirectWithError("Provider not supported", baseUrl);
+  
   try {
     // CSRF Check using oauth_state in cookies
     const cookieStore = await cookies();
@@ -33,23 +36,22 @@ export async function GET(
     const queryState = searchParams.get("state");
 
     if (!queryState || queryState !== savedState) {
-      return redirectWithError("Security Breach: Invalid State", req);
+      return redirectWithError("Security Breach: Invalid State", baseUrl);
     }
     cookieStore.delete("oauth_state");
 
     const code = searchParams.get("code");
-    if (!code) return redirectWithError("Authorization code missing", req);
+    if (!code) return redirectWithError("Authorization code missing", baseUrl);
 
     const tokenData = await strategy.exchangeCode(code);
     const userInfo = await strategy.fetchUserInfo(tokenData);
     const user = await syncUserWithDatabase(userInfo, tokenData);
 
     await setUserId(user.id);
-    return NextResponse.redirect(new URL("/2fa", req.url));
-    // return NextResponse.redirect(new URL("/main", req.url));
+    return NextResponse.redirect(new URL("/2fa", baseUrl));
 
   } catch (error) {
     console.error(`[AUTH_ERROR_${provider.toUpperCase()}]:`, error);
-    return redirectWithError("Authentication failed", req);
+    return redirectWithError("Authentication failed", baseUrl);
   }
 }
