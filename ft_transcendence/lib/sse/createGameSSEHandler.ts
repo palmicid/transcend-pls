@@ -30,7 +30,7 @@ import { broadcaster } from "@/lib/broadcast";
 import prisma from "@/lib/prisma";
 import { GameRegistry } from "@/lib/game/GameRegistry";
 import { RoomSnapshot, PlayerInfo } from "@/types/game";
-import { getBotDisplayName } from "@/lib/bot/botHelpers";
+import { getBotDisplayName, parseBotDifficulty } from "@/lib/bot/botHelpers";
 import type Room from "@/lib/rooms/Room";
 
 // =============================================================================
@@ -180,7 +180,7 @@ export function createGameSSERouteHandler(gameId: string) {
 			bot: room.bot_role
 				? {
 						role: room.bot_role,
-						difficulty: room.bot_difficulty,
+						difficulty: parseBotDifficulty(room.bot_difficulty),
 						delayMs: room.bot_delay_ms ?? 500,
 					}
 				: null,

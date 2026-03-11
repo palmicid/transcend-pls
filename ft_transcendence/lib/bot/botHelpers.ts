@@ -78,6 +78,21 @@ export function validateBotConfig(
 }
 
 /**
+ * Narrow an arbitrary string value (as stored in the DB) to `BotDifficulty`.
+ * Returns `null` for `null`, `undefined`, or any value that is not one of the
+ * three recognised difficulty tiers, preventing unexpected strings from
+ * leaking into the domain model.
+ */
+export function parseBotDifficulty(
+	value: string | null | undefined,
+): BotDifficulty | null {
+	if (value && (BOT_DIFFICULTIES as readonly string[]).includes(value)) {
+		return value as BotDifficulty;
+	}
+	return null;
+}
+
+/**
  * Get bot configuration from a room for Prisma updates.
  */
 export interface BotPrismaConfig {
