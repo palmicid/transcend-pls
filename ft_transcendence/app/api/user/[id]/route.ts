@@ -13,7 +13,8 @@ export async function GET(
     const user = await userService.getProfileById(parseInt(id));
     if (!user)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    return NextResponse.json(user, { status: 200 })
+    const { email, stats, recentGames, ...publicProfile } = user as any;
+    return NextResponse.json(publicProfile, { status: 200 })
   } catch (err) {
     return NextResponse.json(
       { error: 'Failed to get user ID ', id },
