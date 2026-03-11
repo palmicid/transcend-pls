@@ -17,9 +17,20 @@ export function useHeartbeat() {
       // Only send if the tab is visible
       if (document.visibilityState !== "visible") return;
       try {
-        await fetch("/api/auth/heartbeat", { method: "POST" });
+        const res = await fetch("/api/auth/heartbeat", { method: "POST" });
+        if (!res.ok) {
+          // Stop polling if the user is no longer authenticated
+          if (res.status === 401 || res.status === 403) {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+          }
+          // Silently ignore HTTP errors (e.g. server issues)
+          return;
+        }
       } catch {
-        // Silently ignore errors (user might be offline)
+        // Silently ignore network errors (user might be offline)
       }
     };
 
