@@ -17,7 +17,7 @@ export async function syncUserWithDatabase(
   return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const user = await tx.user.upsert({
       where: { email: userInfo.email },
-      update: { online_status: true, updated_at: new Date(Date.now()) },
+      update: { online_status: true, last_active_at: new Date(), updated_at: new Date(Date.now()) },
       create: {
         email: userInfo.email,
         display_name: `OA_${userInfo.sub.substring(0, 5)}`, 

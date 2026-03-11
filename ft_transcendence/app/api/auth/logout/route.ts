@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { clearUserId } from "@/lib/auth/auth-session";
+import { clearUserId, getSession } from "@/lib/auth/auth-session";
+import prisma from "@/lib/prisma";
 
 export async function POST() {
+  const session = await getSession();
+  if (session?.userId) {
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: { online_status: false },
+    });
+  }
   await clearUserId();
-  // set online_status to FALSE
   return NextResponse.json({ ok: true });
 }

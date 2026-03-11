@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         newUser.display_name = `Player${newUser.id}`;
         await prisma.user.update({
             where: { id: newUser.id },
-            data: { display_name: newUser.display_name },
+            data: { display_name: newUser.display_name, online_status: true, last_active_at: new Date() },
         });
 
         return NextResponse.json({
