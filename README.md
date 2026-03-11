@@ -181,6 +181,13 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Maintained strong runtime responsiveness for game and room operations
 - Implemented by **kkaiyawo**
 
+### Implement real-time features using WebSockets or similar technology.
+- Implemented real-time cross-client updates using Server-Sent Events (SSE) as WebSocket-like streaming transport
+- Broadcasted game state changes efficiently to all subscribers in the same room
+- Added graceful connection/disconnection handling with cleanup and reconnection behavior
+- Implemented delayed player eviction and reconnection grace logic to preserve gameplay continuity
+- Implemented by **kkaiyawo**
+
 ## Module
 
 - List of all chosen modules (Major and Minor).
@@ -200,8 +207,9 @@ This project also emphasizes frontend quality and user experience. A custom-made
 | Major | Gaming and user experience | Implement a complete web-based game where users can play against each other. | 2 pts | kkaiyawo |
 | Major | Gaming and user experience | Remote players - Enable two players on separate computers to play the same game in real-time. | 2 pts | kkaiyawo |
 | Major | Gaming and user experience | Add another game with user history and matchmaking | 2 pts | kkaiyawo |
+| Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
 
-Total points from these modules: **11 points**
+Total points from these modules: **13 points**
 
 ---
 
@@ -312,6 +320,25 @@ Adding another game broadens replayability and showcases scalable architecture f
 
 ### Implementation
 Added a second distinct game mode with matchmaking capabilities, persistent match history, and user statistics tracking while maintaining performance and responsiveness.
+
+**Contributor:** kkaiyawo
+
+---
+
+## 8. Implement real-time features using WebSockets or similar technology.
+
+**Type:** Major
+**Category:** Web
+**Points:** 2
+
+### Justification
+Real-time communication is essential for live multiplayer gameplay, synchronized room state, and responsive cross-client user experience.
+
+### Implementation
+Implemented real-time updates using SSE (a WebSocket-like streaming technology) with room-scoped broadcasting, connection lifecycle handling, and reconnection resilience:
+- Real-time updates across clients were delivered through server push streams to all connected room subscribers.
+- Connection and disconnection were handled gracefully with stream cleanup, keep-alive behavior, and deferred player removal.
+- Efficient message broadcasting was implemented through in-memory room-based pub/sub listener sets.
 
 **Contributor:** kkaiyawo
 
