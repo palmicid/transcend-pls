@@ -146,8 +146,8 @@ export default class Room {
    */
   attachGame(game: Game<GameConfig, GameState, PlayerSlot>, initialState?: unknown): void {
     this._game = game;
-    this.game.loadConfig();
-    this.game.loadState(initialState);
+    this._game.loadConfig();
+    this._game.loadState(initialState);
   }
 
   // ===========================================================================
@@ -414,4 +414,5 @@ export default class Room {
   private broadcastSnapshot(): void {
     this.broadcast("snapshot", {});
   }
+
 }

@@ -9,44 +9,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { RoomSnapshot as BaseRoomSnapshot } from "@/types/game";
+import {
+  parseGameSSEPayload,
+  type GameRoomSnapshot,
+} from "@/lib/sse";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export interface PlayerInfo {
-  userId: number;
-  displayName: string;
-  role: string | null;
-  isConnected: boolean;
-  /** Whether this player is the bot */
-  isBot?: boolean;
-}
-
-/** Bot configuration as broadcast via SSE */
-export interface BotInfo {
-  role: string;
-  difficulty: 1 | 3 | 9;
-  delayMs: number;
-}
-
-export interface RoomSnapshot {
-  roomId: string;
-  status: string;
-  board: (string | null)[];
-  currentTurn: string | null;
-  winner: string | null;
-  isDraw: boolean;
-  players: PlayerInfo[];
-  maxPlayers: number;
-  myRole?: string | null;
-  /** Bot configuration, if a bot is in the game */
-  bot?: BotInfo | null;
-}
+export type RoomSnapshot = GameRoomSnapshot;
 
 export interface UseGameSSEResult {
   /** Full room snapshot from Prisma */
-  snapshot: RoomSnapshot | null;
+  snapshot: BaseRoomSnapshot<unknown> | null;
   /** Whether SSE connection is established */
   isConnected: boolean;
   /** Player's role in the game (X, O) */
@@ -80,70 +57,40 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
   useEffect(() => {
     if (!roomId || !sseUrl) return;
 
-    console.log("[SSE] Connecting to:", sseUrl);
-
     const eventSource = new EventSource(sseUrl, { withCredentials: true });
 
     eventSource.onopen = () => {
-      console.log("[SSE] Connection opened");
       setIsConnected(true);
       setError(null);
     };
 
     eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      const payload = parseGameSSEPayload(event.data);
+      if (!payload) return;
 
-        // Track event type
-        if (data.event) {
-          setLastEvent(data.event);
-        }
-
-        // Update snapshot from any event that includes room data
-        // Note: Check for either board or snapshot (config changes include snapshot)
-        const snapshotData = data.snapshot || data;
-        if (data.roomId && (snapshotData.board !== undefined)) {
-          const playersRaw = snapshotData.players;
-          const playersFromSnapshot: PlayerInfo[] | null = Array.isArray(playersRaw)
-            ? (playersRaw as PlayerInfo[])
-            : null;
-
-          // Derive myRole from players list using current userId (via ref)
-          // Use ref instead of adding userId to dependency array to avoid reconnecting
-          // the SSE whenever userId changes
-          if (userIdRef.current != null && playersFromSnapshot) {
-            const derived =
-              playersFromSnapshot.find((p) => p.userId === userIdRef.current)?.role || null;
-            if (derived) {
-              setMyRole(derived);
-            }
-          }
-
-          // Update myRole if provided explicitly in the event (initial snapshot)
-          if (snapshotData.myRole) {
-            setMyRole(snapshotData.myRole);
-          }
-
-          setSnapshot((prev) => ({
-            roomId: data.roomId,
-            status: data.status || snapshotData.status,
-            board: snapshotData.board,
-            currentTurn: snapshotData.currentTurn,
-            winner: snapshotData.winner,
-            isDraw: snapshotData.isDraw || snapshotData.is_draw,
-            players: playersFromSnapshot ?? prev?.players ?? [],
-            maxPlayers: snapshotData.maxPlayers || 2,
-            myRole: snapshotData.myRole,
-            bot: snapshotData.bot || null,
-          }));
-        }
-      } catch (err) {
-        console.error("[SSE] Parse error:", err);
+      if (payload.event) {
+        setLastEvent(payload.event);
       }
+
+      if (!payload.snapshot) return;
+
+      if (userIdRef.current != null) {
+        const derived =
+          payload.snapshot.players.find((p) => p.userId === userIdRef.current)
+            ?.role ?? null;
+        if (derived) {
+          setMyRole(derived);
+        }
+      }
+
+      if (payload.snapshot.myRole) {
+        setMyRole(payload.snapshot.myRole);
+      }
+
+      setSnapshot(payload.snapshot);
     };
 
     eventSource.onerror = () => {
-      console.error("[SSE] Connection error");
       setIsConnected(false);
       if (eventSource.readyState === EventSource.CLOSED) {
         setError("Connection closed");
@@ -151,7 +98,6 @@ export function useGameSSE(roomId: string, sseUrl: string, userId?: number): Use
     };
 
     return () => {
-      console.log("[SSE] Closing connection");
       eventSource.close();
     };
     // Dependency array: only reconnect if roomId or sseUrl changes

@@ -10,100 +10,97 @@ import { getSession } from "@/lib/auth/auth-session";
 import { roomManager, loadAndValidateRoom, Room } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import { GameRegistry } from "@/lib/game/GameRegistry";
+import { getBotDisplayName } from "@/lib/bot/botHelpers";
 import { saveGameResult } from "@/lib/game/saveGameResult";
 
-// =============================================================================
-// SYNC UTILITIES
-// =============================================================================
+export async function attachBotMoveCallback(
+	roomId: string,
+	room: Room,
+	gameId: string,
+): Promise<void> {
+	const game: any = room.game;
+	if (!game || typeof game.onBotMove === "undefined") return;
 
-async function syncRoomToDb(roomId: string, room: Room, gameId: string): Promise<void> {
-  const snapshot = room.getSnapshot() as any;
-  if (!snapshot) return;
+	game.onBotMove = async () => {
+		const ended =
+			typeof game.checkEndConditions === "function"
+				? game.checkEndConditions()
+				: false;
 
-  await prisma.room.update({
-    where: { id: roomId },
-    data: {
-      status: room.status,
-      board_state: snapshot.board,
-      current_turn: snapshot.winner ? null : snapshot.currentTurn,
-      winner_role: snapshot.winner,
-    },
-  });
+		if (ended && room.status !== "ENDED") {
+			room.end();
+		}
+
+		await roomManager.persistStateToDb(roomId);
+		await broadcastRoomSnapshot(
+			roomId,
+			ended ? "game_end" : "game_move",
+			gameId,
+		);
+	};
 }
 
-function attachBotMoveCallback(roomId: string, room: Room, gameId: string): void {
-  const game: any = room.game;
-  if (!game || typeof game.onBotMove === "undefined") return;
+export async function broadcastRoomSnapshot(
+	roomId: string,
+	event: string,
+	gameId: string,
+): Promise<void> {
+	const gameDef = GameRegistry.getOrThrow(gameId);
 
-  game.onBotMove = async () => {
-    const ended = typeof game.checkEndConditions === "function" ? game.checkEndConditions() : false;
+	const room = await prisma.room.findUnique({
+		where: { id: roomId },
+		include: {
+			players: {
+				include: { user: { select: { id: true, display_name: true } } },
+			},
+		},
+	});
 
-    if (ended && room.status !== "ENDED") {
-      room.end();
-    }
+	if (!room) return;
 
-    await syncRoomToDb(roomId, room, gameId);
-    await broadcastRoomSnapshot(roomId, ended ? "game_end" : "game_move", gameId);
-  };
-}
+	const board = gameDef.parseBoard(room.board_state);
+	const isDraw = gameDef.checkDraw(board, room.winner_role);
 
-export async function broadcastRoomSnapshot(roomId: string, event: string, gameId: string): Promise<void> {
-  const gameDef = GameRegistry.getOrThrow(gameId);
+	const players = room.players.map((p: any) => ({
+		userId: p.user_id,
+		displayName: p.user.display_name,
+		role: p.role,
+		isConnected: true,
+		isBot: false,
+	}));
 
-  const room = await prisma.room.findUnique({
-    where: { id: roomId },
-    include: {
-      players: {
-        include: { user: { select: { id: true, display_name: true } } },
-      },
-    },
-  });
+	if (room.bot_role && room.bot_difficulty) {
+		players.push({
+			userId: -1,
+			displayName: getBotDisplayName(room.bot_difficulty),
+			role: room.bot_role,
+			isConnected: true,
+			isBot: true,
+		});
+	}
 
-  if (!room) return;
-
-  const board = gameDef.parseBoard(room.board_state);
-  const isDraw = gameDef.checkDraw(board, room.winner_role);
-
-  const players = room.players.map((p: any) => ({
-    userId: p.user_id,
-    displayName: p.user.display_name,
-    role: p.role,
-    isConnected: true,
-    isBot: false,
-  }));
-
-  if (room.bot_role && room.bot_difficulty) {
-    players.push({
-      userId: -1,
-      displayName: `Bot (${room.bot_difficulty === 1 ? "Easy" : room.bot_difficulty === 3 ? "Medium" : "Hard"})`,
-      role: room.bot_role,
-      isConnected: true,
-      isBot: true,
-    });
-  }
-
-  broadcaster.broadcast(
-    roomId,
-    JSON.stringify({
-      event,
-      roomId: room.id,
-      gameType: room.game_type,
-      status: room.status,
-      board,
-      currentTurn: room.current_turn,
-      winner: room.winner_role,
-      isDraw,
-      players,
-      maxPlayers: room.max_players,
-      bot: room.bot_role
-        ? {
-            role: room.bot_role,
-            difficulty: room.bot_difficulty,
-            delayMs: room.bot_delay_ms ?? 500,
-          }
-        : null,
-    })
-  );
+	broadcaster.broadcast(
+		roomId,
+		JSON.stringify({
+			event,
+			roomId: room.id,
+			gameType: room.game_type,
+			status: room.status,
+			board,
+			currentTurn: room.current_turn,
+			winner: room.winner_role,
+			isDraw,
+			players,
+			maxPlayers: room.max_players,
+			bot: room.bot_role
+				? {
+						role: room.bot_role,
+						difficulty: room.bot_difficulty,
+						delayMs: room.bot_delay_ms ?? 500,
+					}
+				: null,
+		}),
+	);
 }
 
 // =============================================================================
@@ -113,159 +110,159 @@ export async function broadcastRoomSnapshot(roomId: string, event: string, gameI
 /**
  * Create a new game room.
  */
-export async function createGameRoom(gameId: string): Promise<{ ok: boolean; roomId?: string; error?: string }> {
-  const session = await getSession();
-  if (!session) return { ok: false, error: "Unauthorized" };
+export async function createGameRoom(
+	gameId: string,
+): Promise<{ ok: boolean; roomId?: string; error?: string }> {
+	const session = await getSession();
+	if (!session) return { ok: false, error: "Unauthorized" };
 
-  const gameDef = GameRegistry.get(gameId);
-  if (!gameDef) return { ok: false, error: "Unknown game type" };
+	const gameDef = GameRegistry.get(gameId);
+	if (!gameDef) return { ok: false, error: "Unknown game type" };
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user) return { ok: false, error: "User not found" };
+	const user = await prisma.user.findUnique({ where: { id: session.userId } });
+	if (!user) return { ok: false, error: "User not found" };
 
-  try {
-    const roomId = `room-${Math.random().toString(36).substring(2, 9)}`;
+	try {
+		const roomId = `room-${Math.random().toString(36).substring(2, 9)}`;
 
-    const room = await prisma.room.create({
-      data: {
-        id: roomId,
-        game_type: gameId,
-        owner_id: session.userId,
-        max_players: gameDef.maxPlayers,
-        status: "OPEN",
-        board_state: gameDef.createEmptyBoard() as any,
-        current_turn: gameDef.firstTurn,
-      },
-    });
+		const room = await roomManager.createRoomRecord({
+			id: roomId,
+			gameType: gameId,
+			ownerId: session.userId,
+			maxPlayers: gameDef.maxPlayers,
+			boardState: gameDef.createEmptyBoard() as any,
+			currentTurn: gameDef.firstTurn,
+		});
 
-    const game = gameDef.createGame();
-    game.init();
-    roomManager.attachGame(room.id, game, broadcaster, session.userId.toString());
+		const game = gameDef.createGame();
+		game.init();
+		roomManager.attachGame(
+			room.id,
+			game,
+			broadcaster,
+			session.userId.toString(),
+		);
 
-    return { ok: true, roomId: room.id };
-  } catch (error) {
-    console.error("Create room failed:", error);
-    return { ok: false, error: "Failed to create room" };
-  }
+		return { ok: true, roomId: room.id };
+	} catch (error) {
+		console.error("Create room failed:", error);
+		return { ok: false, error: "Failed to create room" };
+	}
 }
 
 /**
  * Submit a game move.
  */
 export async function submitGameMove(
-  roomId: string,
-  action: unknown,
-  gameId: string
+	roomId: string,
+	action: unknown,
+	gameId: string,
 ): Promise<{ ok: boolean; error?: string; snapshot: unknown }> {
-  const session = await getSession();
-  if (!session) return { ok: false, error: "Unauthorized", snapshot: null };
+	const session = await getSession();
+	if (!session) return { ok: false, error: "Unauthorized", snapshot: null };
 
-  const gameDef = GameRegistry.get(gameId);
-  if (!gameDef) return { ok: false, error: "Unknown game", snapshot: null };
+	const gameDef = GameRegistry.get(gameId);
+	if (!gameDef) return { ok: false, error: "Unknown game", snapshot: null };
 
-  try {
-    const room = await loadAndValidateRoom(roomId);
-    if (!room) return { ok: false, error: "Room not found", snapshot: null };
+	try {
+		const room = await loadAndValidateRoom(roomId);
+		if (!room) return { ok: false, error: "Room not found", snapshot: null };
 
-    attachBotMoveCallback(roomId, room, gameId);
+		attachBotMoveCallback(roomId, room, gameId);
 
-    // Get current state from DB for validation
-    const dbRoom = await prisma.room.findUnique({ where: { id: roomId } });
-    if (!dbRoom) return { ok: false, error: "Room not found", snapshot: null };
+		// Get current state from DB for validation
+		const dbRoom = await prisma.room.findUnique({ where: { id: roomId } });
+		if (!dbRoom) return { ok: false, error: "Room not found", snapshot: null };
 
-    // Get player's role
-    const player = await prisma.roomPlayer.findUnique({
-      where: { room_id_user_id: { room_id: roomId, user_id: session.userId } },
-    });
-    if (!player?.role) return { ok: false, error: "Not in room", snapshot: null };
+		// Get player's role
+		const player = await prisma.roomPlayer.findUnique({
+			where: { room_id_user_id: { room_id: roomId, user_id: session.userId } },
+		});
+		if (!player?.role)
+			return { ok: false, error: "Not in room", snapshot: null };
 
-    // Validate action using registry
-    const board = gameDef.parseBoard(dbRoom.board_state);
-    const validation = gameDef.validateAction(
-      board,
-      action,
-      player.role,
-      dbRoom.current_turn || gameDef.firstTurn
-    );
+		// Validate action using registry
+		const board = gameDef.parseBoard(dbRoom.board_state);
+		const validation = gameDef.validateAction(
+			board,
+			action,
+			player.role,
+			dbRoom.current_turn || gameDef.firstTurn,
+		);
 
-    if (!validation.valid) {
-      return { ok: false, error: validation.error, snapshot: null };
-    }
+		if (!validation.valid) {
+			return { ok: false, error: validation.error, snapshot: null };
+		}
 
-    // Submit to in-memory room
-    const success = room.submitAction(session.userId.toString(), action);
+		// Submit to in-memory room
+		const success = await roomManager.submitAction(
+			roomId,
+			session.userId.toString(),
+			action,
+		);
 
-    if (success) {
-      // Check win/draw using registry
-      const newSnapshot = room.getSnapshot() as any;
-      const newBoard = gameDef.parseBoard(newSnapshot.board);
-      const winner = gameDef.checkWin(newBoard);
-      const isDraw = gameDef.checkDraw(newBoard, winner);
+		if (success) {
+			// Check win/draw using registry
+			const newSnapshot = room.getSnapshot() as any;
+			const newBoard = gameDef.parseBoard(newSnapshot.board);
+			const winner = gameDef.checkWin(newBoard);
+			const isDraw = gameDef.checkDraw(newBoard, winner);
 
-      // Save game result if game ended
-      if (winner || isDraw) {
-        const roomPlayers = await prisma.roomPlayer.findMany({
-          where: { room_id: roomId },
-          select: { user_id: true, role: true },
-        });
+			// Save game result if game ended
+			if (winner || isDraw) {
+				const roomPlayers = await prisma.roomPlayer.findMany({
+					where: { room_id: roomId },
+					select: { user_id: true, role: true },
+				});
 
-        await saveGameResult({
-          gameType: gameId,
-          roomId,
-          players: roomPlayers.map((p) => ({ id: p.user_id, role: p.role })),
-          winnerRole: winner,
-          isDraw,
-          startedAt: dbRoom.created_at,
-        });
-      }
+				await saveGameResult({
+					gameType: gameId,
+					roomId,
+					players: roomPlayers.map((p: { user_id: number; role: string }) => ({
+						id: p.user_id,
+						role: p.role,
+					})),
+					winnerRole: winner,
+					isDraw,
+					startedAt: dbRoom.created_at,
+				});
+			}
 
-      // Update DB with winner/draw status
-      await prisma.room.update({
-        where: { id: roomId },
-        data: {
-          status: winner || isDraw ? "ENDED" : "IN_GAME",
-          board_state: newSnapshot.board,
-          current_turn: winner ? null : newSnapshot.currentTurn,
-          winner_role: winner,
-        },
-      });
+			await broadcastRoomSnapshot(roomId, "game_move", gameId);
+		}
 
-      await broadcastRoomSnapshot(roomId, "game_move", gameId);
-    }
-
-    return { ok: success, snapshot: room.getSnapshot() };
-  } catch (error) {
-    console.error("Submit move failed:", error);
-    return { ok: false, error: "Server error", snapshot: null };
-  }
+		return { ok: success, snapshot: room.getSnapshot() };
+	} catch (error) {
+		console.error("Submit move failed:", error);
+		return { ok: false, error: "Server error", snapshot: null };
+	}
 }
 
 /**
  * Start a game (READY → IN_GAME).
  */
-export async function startGame(roomId: string, gameId: string): Promise<{ ok: boolean }> {
-  const session = await getSession();
-  if (!session) return { ok: false };
+export async function startGame(
+	roomId: string,
+	gameId: string,
+): Promise<{ ok: boolean }> {
+	const session = await getSession();
+	if (!session) return { ok: false };
 
-  try {
-    const room = await loadAndValidateRoom(roomId);
-    if (!room) return { ok: false };
+	try {
+		const room = await loadAndValidateRoom(roomId);
+		if (!room) return { ok: false };
 
-    attachBotMoveCallback(roomId, room, gameId);
+		attachBotMoveCallback(roomId, room, gameId);
 
-    const started = room.start();
+		const started = await roomManager.start(roomId);
 
-    if (started) {
-      await prisma.room.update({
-        where: { id: roomId },
-        data: { status: "IN_GAME" },
-      });
-      await broadcastRoomSnapshot(roomId, "game_start", gameId);
-    }
+		if (started) {
+			await broadcastRoomSnapshot(roomId, "game_start", gameId);
+		}
 
-    return { ok: started };
-  } catch (error) {
-    console.error("Start game failed:", error);
-    return { ok: false };
-  }
+		return { ok: started };
+	} catch (error) {
+		console.error("Start game failed:", error);
+		return { ok: false };
+	}
 }

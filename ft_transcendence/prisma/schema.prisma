@@ -100,7 +100,7 @@ model Room {
   winner_role  String?
 
   // Bot configuration
-  bot_difficulty Int? // null = no bot, 1 = Easy, 3 = Medium, 9 = Hard
+  bot_difficulty String? // null = no bot, "Easy" | "Medium" | "Hard"
   bot_role       String? // "X" or "O" - which slot the bot occupies
   bot_delay_ms   Int     @default(500) // Delay before bot moves (ms)
 
