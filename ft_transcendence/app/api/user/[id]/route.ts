@@ -4,7 +4,7 @@ import { PrismaClientKnownRequestError, PrismaClientValidationError } from "@pri
 import { userService, userUpdateSchema } from "@/services/userService"
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import Select from "@/components/ui/Select";
+import { getSession } from "@/lib/auth/auth-session";
 
 // Get user by ID
 export async function GET(
@@ -33,10 +33,13 @@ export async function PATCH(
 ) {
   const { id } = await params
   try {
+    const session = await getSession();
+    if (!session || session?.userId !== parseInt(id))
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const body = await _request.json();
     const validatedBody = await userUpdateSchema.parse(body);
-    if (body.password)
-      body.password = await bcrypt.hash(body.password, 12);
+    if (validatedBody.password)
+      validatedBody.password = await bcrypt.hash(validatedBody.password, 12);
     const updateUser = await prisma.user.update({
       where: {
         id: parseInt(id),
@@ -61,8 +64,9 @@ export async function PATCH(
       if (err.code == 'P2025')
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    if (err instanceof PrismaClientValidationError)
+    if (err instanceof PrismaClientValidationError){
       return NextResponse.json({ error: 'Invalid JSON body request' }, { status: 400 });
+    }
     if (err instanceof z.ZodError){
       const [issue] = err.issues;
       return NextResponse.json({ error: issue?.message }, { status: 400 });
