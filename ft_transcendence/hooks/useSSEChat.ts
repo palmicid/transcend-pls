@@ -26,7 +26,8 @@ export function useSSEChat() {
 
     // Detect rate limit
     if (res.status === 429) {
-      throw new Error("RATE_LIMIT");
+      const data = await res.json();
+      throw new Error(`RATE_LIMIT:${data.retryAfter}`);
     }
 
     if (!res.ok) {

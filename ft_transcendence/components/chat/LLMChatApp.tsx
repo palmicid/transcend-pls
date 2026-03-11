@@ -48,10 +48,11 @@ export default function LLMChatApp() {
         },
       });
     } catch (err: any) {
-      if (err.message === "RATE_LIMIT") {
+      if (err.message.startsWith("RATE_LIMIT")) {
+        const seconds = err.message.split(":")[1];
         setAssistantError(
           activeId,
-          "⚠️ Too many requests. Please wait a minute."
+          `⚠️ Too many requests. Try again in ${seconds}s`
         );
       } else {
         setAssistantError(
