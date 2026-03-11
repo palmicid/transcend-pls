@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import Link from "next/link"
+import { HeartbeatProvider } from "@/components/HeartbeatProvider"
 
 export default function RootLayout({
   children,
@@ -27,12 +28,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <nav className="p-4 border-b flex gap-4 text-white">
-          <Link href="/">Home</Link>
-          <Link href="/llm">AI Assistant</Link>
-          <Link href="/lobby">Tic-Tac-Toe</Link>
-        </nav>
-        {children}
+        <HeartbeatProvider>
+          <nav className="p-4 border-b flex gap-4 text-white">
+            <Link href="/">Home</Link>
+            <Link href="/llm">AI Assistant</Link>
+            <Link href="/lobby">Tic-Tac-Toe</Link>
+          </nav>
+          {children}
+        </HeartbeatProvider>
       </body>
     </html>
   )
