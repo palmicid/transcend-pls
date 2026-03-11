@@ -1,4 +1,6 @@
 import type { BotConfig, PlayerInfo, RoomSnapshot, RoomStatus } from "@/types/game";
+import { BOT_DIFFICULTIES } from "@/lib/bot/constants";
+import type { BotDifficulty } from "@/lib/bot/constants";
 
 export interface GameRoomSnapshot extends RoomSnapshot<unknown> {
   myRole?: string | null;
@@ -61,20 +63,20 @@ export function parseGameSSEPayload(rawData: string): ParsedGameSSEPayload | nul
 
   const players = parsePlayers(snapshotSource.players) ?? [];
 
-  const bot =
+  const bot: BotConfig | null =
     isRecord(snapshotSource.bot) && typeof snapshotSource.bot.role === "string"
-      ? ({
+      ? {
           role: snapshotSource.bot.role,
           difficulty:
-            typeof snapshotSource.bot.difficulty === "number" ||
-            snapshotSource.bot.difficulty === null
-              ? snapshotSource.bot.difficulty
+            typeof snapshotSource.bot.difficulty === "string" &&
+            (BOT_DIFFICULTIES as readonly string[]).includes(snapshotSource.bot.difficulty)
+              ? (snapshotSource.bot.difficulty as BotDifficulty)
               : null,
           delayMs:
             typeof snapshotSource.bot.delayMs === "number"
               ? snapshotSource.bot.delayMs
               : 500,
-        } as BotConfig)
+        }
       : null;
 
   const status =
