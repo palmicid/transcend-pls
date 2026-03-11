@@ -43,7 +43,7 @@ export interface TicTacToePersistedState {
 	current_turn?: string | null;
 	status?: string;
 	winner_role?: string | null;
-	bot_difficulty?: number | null;
+	bot_difficulty?: BotDifficulty | null;
 	bot_role?: string | null;
 	bot_delay_ms?: number;
 	players?: Array<{ role: string; user_id: number | string }>;
@@ -342,7 +342,7 @@ export default class TicTacToeGame extends Game<
 		if (data.bot_role && data.bot_difficulty) {
 			this.configureBot(
 				data.bot_role as "X" | "O",
-				data.bot_difficulty as unknown as BotDifficulty,
+				data.bot_difficulty,
 				data.bot_delay_ms ?? 500,
 			);
 		}
