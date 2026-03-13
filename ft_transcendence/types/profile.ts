@@ -1,3 +1,5 @@
+import type { XPInfo, UserAchievementInfo } from "./progression";
+
 export type ProfileFieldConfig = {
   key: string;
   label: string;
@@ -26,6 +28,8 @@ export interface ProfileGameSummary {
   result: "win" | "loss" | "draw";
   opponent: { id: number; displayName: string };
   finalBoard: unknown;
+  xpEarned?: number;
+  playerRole?: string | null;
 }
 
 export interface ProfileUser {
@@ -39,4 +43,6 @@ export interface ProfileUser {
   use2FA: boolean;
   stats?: ProfileGameStats;
   recentGames?: ProfileGameSummary[];
+  xp?: XPInfo;
+  achievements?: UserAchievementInfo[];
 }

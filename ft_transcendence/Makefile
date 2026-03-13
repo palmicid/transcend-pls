@@ -282,7 +282,19 @@ setup: install ## Initial project setup
 	@echo "$(GREEN)✅ Setup complete! Run 'make dev' to start development.$(RESET)"
 
 .PHONY: all
-all: build dev ## Build and run development environment
+all: dev-detached  ## Build and run development environment
+	docker exec nextjs-app-dev npx prisma db push
+	docker exec nextjs-app-dev npx prisma generate
+	make stop
+	make prod
+
+.PHONY: all-no-ollama
+all-no-ollama:
+	make dev-no-ollama-detached
+	docker exec nextjs-app-dev npx prisma db push
+	docker exec nextjs-app-dev npx prisma generate
+	make stop
+	make prod-no-ollama
 
 .PHONY: https-setup
 https-setup:

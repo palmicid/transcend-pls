@@ -294,9 +294,9 @@ describe("Bot Integration Tests", () => {
 				current_turn: "X",
 				status: "IN_GAME",
 				bot_role: "O",
-				bot_difficulty: "Hard",
+				bot_difficulty: "Hard" as const,
 				bot_delay_ms: 500,
-			};
+			} as any;
 
 			game.restoreState(persistedState);
 
