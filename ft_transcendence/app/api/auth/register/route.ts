@@ -2,26 +2,37 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { setUserId } from "@/lib/auth/auth-session";
+import { z } from "zod";
+
+const emailSchema = z.string().email("Invalid email address");
+const passwordSchema = z.string()
+    .min(8, "Password must be at least 8 characters long")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
+const registerSchema = z.object({
+    email: emailSchema,
+    password: passwordSchema,
+});
 
 export async function POST(req: Request) {
     try {
         const body = await req.json().catch(() => null);
-        const email = body?.email?.trim();
-        const password = body?.password;
 
-        if (!email || !password) {
-            return NextResponse.json({ ok: false, message: "Missing email or password" }, { status: 400 });
+        // Validate email & password using Zod schemas
+        const parsed = registerSchema.safeParse(body);
+        if (!parsed.success) {
+            const message = parsed.error.errors[0]?.message ?? "Invalid input";
+            return NextResponse.json({ ok: false, message }, { status: 400 });
         }
+
+        const { email, password } = parsed.data;
 
         //hash password
         const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Check email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return NextResponse.json({ ok: false, message: "Invalid email format" }, { status: 400 });
-        }
 
         // Check existing email
         const isExistingEmail = await prisma.user.findFirst({
