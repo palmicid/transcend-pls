@@ -73,17 +73,16 @@ export async function checkAndAwardAchievements(
 
   // 2. Evaluate all achievements
   const newlyUnlocked: AchievementDef[] = [];
+  const unlockRecords: { user_id: number; achievement_id: string }[] = [];
 
   for (const achievement of ACHIEVEMENTS) {
     if (alreadyUnlocked.has(achievement.id)) continue;
     if (!achievement.check(ctx)) continue;
 
-    // Insert unlock record (createMany with skipDuplicates for safety)
-    await prisma.userAchievement.create({
-      data: {
-        user_id: userId,
-        achievement_id: achievement.id,
-      },
+    // Collect unlock records; batch insert with createMany + skipDuplicates for safety
+    unlockRecords.push({
+      user_id: userId,
+      achievement_id: achievement.id,
     });
 
     newlyUnlocked.push({
@@ -92,6 +91,13 @@ export async function checkAndAwardAchievements(
       description: achievement.description,
       icon: achievement.icon,
       category: achievement.category,
+    });
+  }
+
+  if (unlockRecords.length > 0) {
+    await prisma.userAchievement.createMany({
+      data: unlockRecords,
+      skipDuplicates: true,
     });
   }
 
