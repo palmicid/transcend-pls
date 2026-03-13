@@ -85,8 +85,21 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
+    const session = await getSession();
+    if (!session || session?.userId !== parseInt(id))
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const deleteUser = await prisma.user.delete({
-      where: { id: parseInt(id)}
+      where: { id: parseInt(id)},
+      select: {
+        id: true,
+        email: true,
+        display_name: true,
+        avatar_url: true,
+        online_status: true,
+        created_at: true,
+        is_verified: true,
+        use2FA: true,
+      }
     })
     return NextResponse.json(deleteUser, { status: 200 })
   } catch(err) {
