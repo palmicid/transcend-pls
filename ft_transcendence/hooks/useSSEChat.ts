@@ -24,7 +24,7 @@ export function useSSEChat() {
       signal: ac.signal,
     });
 
-    // ⭐ Detect rate limit
+    // Detect rate limit
     if (res.status === 429) {
       throw new Error("RATE_LIMIT");
     }

@@ -2,19 +2,15 @@
 
 import { useRef, useState } from "react";
 import type { Message } from "@/types/chat";
-// import { Sidebar } from "@/components/chat/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useChatThreads } from "@/hooks/useChatThreads";
 import { useSSEChat } from "@/hooks/useSSEChat";
 
 export default function LLMChatApp() {
   const {
-    threads,
     activeId,
     active,
-    setActiveId,
     createNew,
-    remove,
     appendUserAndAssistantDraft,
     appendAssistantToken,
     setAssistantError,
@@ -24,17 +20,23 @@ export default function LLMChatApp() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function onSend() {
     if (loading) return;
+
     const text = input.trim();
     if (!text) return;
 
     setInput("");
     setLoading(true);
 
-    const userMsg: Message = { role: "user", content: text };
+    const userMsg: Message = {
+      role: "user",
+      content: text,
+    };
+
     appendUserAndAssistantDraft(activeId, userMsg);
 
     try {
@@ -46,10 +48,16 @@ export default function LLMChatApp() {
         },
       });
     } catch (err: any) {
-      if (err.message === "Rate limit exceeded") {
-        setAssistantError(activeId, "⚠️ Too many requests. Please wait a minute.");
+      if (err.message === "RATE_LIMIT") {
+        setAssistantError(
+          activeId,
+          "⚠️ Too many requests. Please wait a minute."
+        );
       } else {
-        setAssistantError(activeId, "Sorry — something went wrong.");
+        setAssistantError(
+          activeId,
+          "Sorry — something went wrong."
+        );
       }
     } finally {
       setLoading(false);
@@ -65,27 +73,17 @@ export default function LLMChatApp() {
   if (!active) return null;
 
   return (
-    <div className="w-full">
-      {/* <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 pb-12">
-        <Sidebar
-          threads={threads}
-          activeId={activeId}
-          onNew={createNew}
-          onSelect={setActiveId}
-          onDelete={remove}
-        /> */}
-
-        <ChatPanel
-          thread={active}
-          loading={loading}
-          input={input}
-          setInput={setInput}
-          onSend={onSend}
-          onStop={onStop}
-          onNewMobile={createNew}
-          bottomRef={bottomRef}
-        />
-      </div>
-    // </div>
+    <div className="w-full h-screen">
+      <ChatPanel
+        thread={active}
+        loading={loading}
+        input={input}
+        setInput={setInput}
+        onSend={onSend}
+        onStop={onStop}
+        onNewMobile={createNew}
+        bottomRef={bottomRef}
+      />
+    </div>
   );
 }
