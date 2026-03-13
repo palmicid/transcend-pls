@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { format } from "date-fns";
 import { Trophy, Medal, Star, ChevronRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { LeaderboardEntry } from "@/types/progression";
