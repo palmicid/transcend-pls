@@ -59,7 +59,7 @@ export async function proxy(request: NextRequest) {
             return NextResponse.next();
         return NextResponse.redirect(new URL(TWO_FA_PATH, request.url));
     }
-    if (session.verify2FA && ['/2fa', '/', '/login'].includes(pathname))
+    if (session.verify2FA && [...PUBLIC_PATHS, TWO_FA_PATH].includes(pathname))
         return NextResponse.redirect(new URL('/main', request.url));
     return NextResponse.next();
 }
