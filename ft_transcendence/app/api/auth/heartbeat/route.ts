@@ -3,8 +3,6 @@ import { getSession } from "@/lib/auth/auth-session";
 import prisma from "@/lib/prisma";
 
 const INACTIVITY_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-let lastCleanupTime = 0;
 
 export async function POST() {
   try {
@@ -19,19 +17,16 @@ export async function POST() {
       data: { last_active_at: new Date(), online_status: true },
     });
 
-    // Throttled cleanup: mark stale users as offline (at most once per 5 min)
+    // Cleanup: mark stale users as offline
     const now = Date.now();
-    if (now - lastCleanupTime >= CLEANUP_INTERVAL_MS) {
-      lastCleanupTime = now;
-      const cutoff = new Date(now - INACTIVITY_THRESHOLD_MS);
-      await prisma.user.updateMany({
-        where: {
-          online_status: true,
-          last_active_at: { lt: cutoff },
-        },
-        data: { online_status: false },
-      });
-    }
+    const cutoff = new Date(now - INACTIVITY_THRESHOLD_MS);
+    await prisma.user.updateMany({
+      where: {
+        online_status: true,
+        last_active_at: { lt: cutoff },
+      },
+      data: { online_status: false },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
