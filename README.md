@@ -200,6 +200,18 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Error handling for model availability and request failures
 - Local AI inference without external API dependencies
 
+### Game Statistics and Match History (User Management)
+- Track user game statistics (wins, losses, ranking, level, etc.).
+- Display match history (1v1 games, dates, results, opponents).
+- Show achievements and progression.
+- Leaderboard integration.
+
+### Gamification System (Gaming and User Experience)
+- Implement at least 3 of the following: achievements, badges, leaderboards, XP/level system, daily challenges, rewards.
+- System must be persistent (stored in database).
+- Visual feedback for users (notifications, progress bars, etc.).
+- Clear rules and progression mechanics.
+
 ## Module
 
 - List of all chosen modules (Major and Minor).
@@ -221,8 +233,10 @@ This project also emphasizes frontend quality and user experience. A custom-made
 | Major | Gaming and user experience | Add another game with user history and matchmaking | 2 pts | kkaiyawo |
 | Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
 | Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
+| Minor | User Management | Game statistics and match history | 1 pt | kkaiyawo |
+| Minor | Gaming and user experience | A gamification system to reward users for their actions. | 1 pt | TBD |
 
-Total points from these modules: **15 points**
+Total points from these modules: **17 points**
 
 ---
 
@@ -375,7 +389,45 @@ The system includes:
 
 **Contributor:** scharuka
 
-## Indeividual Contributions
+---
+
+## 10. Game statistics and match history
+
+**Type:** Minor
+**Category:** User Management
+**Points:** 1
+
+### Justification
+Tracking statistics, match history, and providing leaderboards improves user engagement and encourages competitive play.
+
+### Implementation
+- Track user game statistics (wins, losses, ranking, level, etc.).
+- Display match history (1v1 games, dates, results, opponents).
+- Show achievements and progression.
+- Leaderboard integration.
+
+**Contributor:** kkaiyawo
+
+---
+
+## 11. A gamification system to reward users for their actions
+
+**Type:** Minor
+**Category:** Gaming and user experience
+**Points:** 1
+
+### Justification
+Rewards and gamification significantly increase user retention and satisfaction by giving them tangible goals.
+
+### Implementation
+- Implement at least 3 of the following: achievements, badges, leaderboards, XP/level system, daily challenges, rewards.
+- System must be persistent (stored in database).
+- Visual feedback for users (notifications, progress bars, etc.).
+- Clear rules and progression mechanics.
+
+**Contributor:** TBD
+
+## Individual Contributions
 
 - Detailed breakdown of what each team member contributed.
 - Specific features, modules, or components implemented by each person.
