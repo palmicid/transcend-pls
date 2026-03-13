@@ -17,8 +17,9 @@ export async function POST() {
       data: { last_active_at: new Date(), online_status: true },
     });
 
-    // Piggyback: mark stale users as offline (last_active_at > 15 min ago)
-    const cutoff = new Date(Date.now() - INACTIVITY_THRESHOLD_MS);
+    // Cleanup: mark stale users as offline
+    const now = Date.now();
+    const cutoff = new Date(now - INACTIVITY_THRESHOLD_MS);
     await prisma.user.updateMany({
       where: {
         online_status: true,
