@@ -10,8 +10,14 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(Number(searchParams.get("limit")) || 20, 100);
-  const offset = Number(searchParams.get("offset")) || 0;
+  const rawLimit = Number(searchParams.get("limit"));
+  const limit = Math.min(
+    Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 20,
+    100
+  );
+  const rawOffset = Number(searchParams.get("offset"));
+  const offset =
+    Number.isFinite(rawOffset) && rawOffset >= 0 ? Math.floor(rawOffset) : 0;
 
   const [entries, total, myRank] = await Promise.all([
     getLeaderboard({ limit, offset }),
