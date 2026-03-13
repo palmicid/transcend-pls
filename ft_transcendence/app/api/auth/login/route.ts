@@ -22,6 +22,12 @@ export async function POST(req: Request) {
       );
     }
 
+    // Set user online
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { online_status: true, last_active_at: new Date() },
+    });
+
     const response = NextResponse.json({
       ok: true,
       success: true,
