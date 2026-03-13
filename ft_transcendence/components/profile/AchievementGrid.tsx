@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import * as LucideIcons from "lucide-react";
+import { Trophy, Lock } from "lucide-react";
 import type { UserAchievementInfo } from "@/types/progression";
 
 interface AchievementGridProps {
@@ -10,13 +10,18 @@ interface AchievementGridProps {
   className?: string;
 }
 
+const iconMap: Record<string, React.ComponentType<any>> = {
+  Trophy,
+  // Add other icons here as needed, e.g.: Star, Medal, etc.
+};
+
 export function AchievementGrid({ achievements, className = "" }: AchievementGridProps) {
   return (
     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ${className}`}>
       {achievements.map((achievement, i) => {
         const isUnlocked = !!achievement.unlockedAt;
-        // Dynamically resolve icon from Lucide
-        const IconComponent = (LucideIcons as any)[achievement.icon] || LucideIcons.Trophy;
+        // Dynamically resolve icon from explicit icon map
+        const IconComponent = iconMap[achievement.icon] || Trophy;
 
         return (
           <motion.div
@@ -55,7 +60,7 @@ export function AchievementGrid({ achievements, className = "" }: AchievementGri
             )}
             
             {!isUnlocked && (
-              <LucideIcons.Lock size={12} className="absolute top-3 right-3 text-slate-600" />
+              <Lock size={12} className="absolute top-3 right-3 text-slate-600" />
             )}
           </motion.div>
         );
