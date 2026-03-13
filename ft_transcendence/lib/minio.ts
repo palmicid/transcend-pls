@@ -67,12 +67,10 @@ export async function uploadAvatar(
         "Content-Type": contentType,
     });
 
-    // Build the public URL — route through nginx /minio/ proxy in production
-    // to avoid mixed-content (HTTPS→HTTP) issues.
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8443";
-
-    return `${baseUrl}/minio/${MINIO_BUCKET}/${objectName}`;
-    // return `${protocol}://${publicHost}:${publicPort}/${MINIO_BUCKET}/${objectName}`;
+    // Return a relative path so the browser resolves it against
+    // whatever hostname the user is currently accessing (localhost, LAN IP, etc.).
+    // Nginx proxies /minio/ to the MinIO container.
+    return `/minio/${MINIO_BUCKET}/${objectName}`;
 }
 
 export { minioClient, MINIO_BUCKET };
