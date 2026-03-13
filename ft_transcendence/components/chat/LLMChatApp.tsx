@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { Message } from "@/types/chat";
-import { Sidebar } from "@/components/chat/Sidebar";
+// import { Sidebar } from "@/components/chat/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useChatThreads } from "@/hooks/useChatThreads";
 import { useSSEChat } from "@/hooks/useSSEChat";
@@ -45,8 +45,12 @@ export default function LLMChatApp() {
           bottomRef.current?.scrollIntoView({ behavior: "smooth" });
         },
       });
-    } catch {
-      setAssistantError(activeId, "Sorry — something went wrong. Please try again.");
+    } catch (err: any) {
+      if (err.message === "Rate limit exceeded") {
+        setAssistantError(activeId, "⚠️ Too many requests. Please wait a minute.");
+      } else {
+        setAssistantError(activeId, "Sorry — something went wrong.");
+      }
     } finally {
       setLoading(false);
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -62,14 +66,14 @@ export default function LLMChatApp() {
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 pb-12">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 pb-12">
         <Sidebar
           threads={threads}
           activeId={activeId}
           onNew={createNew}
           onSelect={setActiveId}
           onDelete={remove}
-        />
+        /> */}
 
         <ChatPanel
           thread={active}
@@ -82,6 +86,6 @@ export default function LLMChatApp() {
           bottomRef={bottomRef}
         />
       </div>
-    </div>
+    // </div>
   );
 }
