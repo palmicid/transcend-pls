@@ -245,7 +245,9 @@ describe("BotHelpers", () => {
 			const mockBroadcast = vi.fn(async (id: string, event: string) => {
 				callOrder.push(`broadcast:${event}`);
 			});
-			const mockPrismaUpdate = vi.fn(async () => callOrder.push("prisma"));
+			const mockPrismaUpdate = vi.fn(async () => {
+				callOrder.push("prisma");
+			}) as any;
 
 			const callback = createBotMoveCallback(
 				"room-1",

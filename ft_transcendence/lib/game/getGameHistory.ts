@@ -17,6 +17,8 @@ export type GameHistoryEntry = {
   result: "win" | "loss" | "draw";
   opponent: { id: number; displayName: string };
   finalBoard: unknown;
+  xpEarned: number;
+  playerRole: string | null;
 };
 
 export type PlayerStats = {
@@ -56,10 +58,15 @@ export async function getGameHistory(userId: number, options?: {
     skip: offset,
   });
 
-  return results.map((result) => {
-    const player1 = result.player1;
-    const player2 = result.player2;
-    const opponent = player1.id === userId ? player2 : player1;
+  return results.map((result: any) => {
+    const isP1 = result.player1_id === userId;
+    const opponent = isP1 ? result.player2 : result.player1;
+
+    const xpEarnedRaw = isP1 ? result.xp_awarded_p1 : result.xp_awarded_p2;
+    const xpEarned = typeof xpEarnedRaw === "number" ? xpEarnedRaw : 0;
+
+    const playerRoleRaw = isP1 ? result.player1_role : result.player2_role;
+    const playerRole = typeof playerRoleRaw === "string" ? playerRoleRaw : null;
 
     return {
       id: result.id,
@@ -80,6 +87,8 @@ export async function getGameHistory(userId: number, options?: {
         displayName: opponent.display_name,
       },
       finalBoard: result.final_board,
+      xpEarned,
+      playerRole,
     };
   });
 }

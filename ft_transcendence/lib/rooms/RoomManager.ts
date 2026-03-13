@@ -560,9 +560,6 @@ const globalForRooms = globalThis as unknown as {
 
 export const roomManager = globalForRooms.roomManager ?? RoomManager.Instance;
 
-// Preserve instance during development hot-reloads
-if (process.env.NODE_ENV !== "production") {
-  globalForRooms.roomManager = roomManager;
-}
+globalForRooms.roomManager = roomManager;
 
 export default RoomManager;

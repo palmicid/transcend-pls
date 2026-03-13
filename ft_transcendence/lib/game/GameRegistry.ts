@@ -69,6 +69,17 @@ export interface GameDefinition {
   parseBoard: (raw: unknown) => unknown;
 
   // ─────────────────────────────────────────────────────────────────────────
+  // PROGRESSION
+  // ─────────────────────────────────────────────────────────────────────────
+
+  xpReward: {
+    base: number;
+    winMultiplier: number;
+    drawMultiplier: number;
+    lossMultiplier: number;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   // GAME LOGIC
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -182,6 +193,8 @@ GameRegistry.register({
   firstTurn: "X",
   supportsBots: true, // TTT supports bots
 
+  xpReward: { base: 50, winMultiplier: 2, drawMultiplier: 1, lossMultiplier: 0.5 },
+
   boardInfo: { type: "linear", size: 9 },
   createEmptyBoard: () => Array(9).fill(null),
   parseBoard: (raw) => (raw as (string | null)[]) || Array(9).fill(null),
@@ -236,6 +249,8 @@ GameRegistry.register({
   roles: ["Red", "Yellow"] as const,
   firstTurn: "Red",
   supportsBots: true, // Connect4 supports bots
+
+  xpReward: { base: 75, winMultiplier: 2, drawMultiplier: 1, lossMultiplier: 0.5 },
 
   boardInfo: { type: "grid", rows: 6, cols: 7 },
   createEmptyBoard: () => Array(6).fill(null).map(() => Array(7).fill(null)),

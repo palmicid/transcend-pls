@@ -61,7 +61,7 @@ describe('Connect4 Server Actions', () => {
       it('should create a room and attach game', async () => {
           mockPrisma.room.create.mockResolvedValue({ id: 'room-new', game_type: 'connect4' });
 
-          const result = await createConnect4Room('room-new', '123');
+          const result = await createConnect4Room();
 
           expect(mockPrisma.room.create).toHaveBeenCalledWith(expect.objectContaining({
               data: expect.objectContaining({

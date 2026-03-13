@@ -22,6 +22,9 @@ export const userUpdateSchema = z.object({
 
 });
 
+import { getXPInfo } from "@/lib/game/xpService";
+import { getUserAchievements } from "@/lib/game/achievementService";
+
 export const userService = {
     async getUserById(userId: number){
         console.log("getuserbyid");
@@ -54,7 +57,7 @@ export const userService = {
         });
     },
     async getProfileById(userId: number): Promise<ProfileUser | null> {
-        const [user, recentGames, stats] = await Promise.all([
+        const [user, recentGames, stats, xpInfo, achievements] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -70,6 +73,8 @@ export const userService = {
             }),
             getGameHistory(userId, { limit: 5 }),
             getPlayerStats(userId),
+            getXPInfo(userId),
+            getUserAchievements(userId),
         ]);
 
         if (!user) {
@@ -85,6 +90,8 @@ export const userService = {
             createdAt: user.created_at.toISOString(),
             isVerified: user.is_verified,
             use2FA: user.use2FA,
+            xp: xpInfo,
+            achievements,
             stats: {
                 ...stats,
             },
@@ -95,4 +102,4 @@ export const userService = {
             })),
         };
     },
-}
+};

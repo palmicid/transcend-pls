@@ -37,7 +37,6 @@ vi.mock("@/lib/broadcast", () => ({
 import { roomManager } from "@/lib/rooms";
 import {
   createTicTacToeRoom,
-  joinTicTacToeRoom,
   submitTicTacToeMove,
   startTicTacToeGame,
 } from "@/app/play/tic-tac-toe/actions";
@@ -56,19 +55,13 @@ describe.skip("Tic-Tac-Toe Server Actions", () => {
 
   describe("createTicTacToeRoom", () => {
     it("should create a room with game attached", async () => {
-      const result = await createTicTacToeRoom(testRoomId, "owner-1");
+      const result = await createTicTacToeRoom(testRoomId);
       expect(result.ok).toBe(true);
       expect(result.roomId).toBe(testRoomId);
 
       const room = roomManager.getRoom(testRoomId);
       expect(room).toBeDefined();
       expect(room?.gameType).toBe("tic-tac-toe");
-    });
-
-    it("should set owner correctly", async () => {
-      await createTicTacToeRoom(testRoomId, "owner-1");
-      const room = roomManager.getRoom(testRoomId);
-      expect(room?.owner).toBe("owner-1");
     });
 
     it("should work without owner", async () => {
@@ -78,42 +71,17 @@ describe.skip("Tic-Tac-Toe Server Actions", () => {
   });
 
   // ===========================================================================
-  // joinTicTacToeRoom
-  // ===========================================================================
-
-  describe("joinTicTacToeRoom", () => {
-    beforeEach(async () => {
-      await createTicTacToeRoom(testRoomId, "owner-1");
-    });
-
-    it("should add player to room", async () => {
-      const result = await joinTicTacToeRoom(testRoomId, "player-1");
-      expect(result.ok).toBe(true);
-    });
-
-    it("should return current room state", async () => {
-      await joinTicTacToeRoom(testRoomId, "player-1");
-      const result = await joinTicTacToeRoom(testRoomId, "player-2");
-      expect(result.state).toBe("READY");
-    });
-
-    it("should reject third player", async () => {
-      await joinTicTacToeRoom(testRoomId, "player-1");
-      await joinTicTacToeRoom(testRoomId, "player-2");
-      const result = await joinTicTacToeRoom(testRoomId, "player-3");
-      expect(result.ok).toBe(false);
-    });
-  });
-
-  // ===========================================================================
   // startTicTacToeGame
   // ===========================================================================
 
   describe("startTicTacToeGame", () => {
     beforeEach(async () => {
-      await createTicTacToeRoom(testRoomId, "owner-1");
-      await joinTicTacToeRoom(testRoomId, "player-1");
-      await joinTicTacToeRoom(testRoomId, "player-2");
+      await createTicTacToeRoom(testRoomId);
+      const room = roomManager.getRoom(testRoomId);
+      if (room) {
+          room.addPlayer("player-1");
+          room.addPlayer("player-2");
+      }
     });
 
     it("should start game when ready", async () => {
@@ -127,7 +95,8 @@ describe.skip("Tic-Tac-Toe Server Actions", () => {
     it("should fail if not ready", async () => {
       roomManager.destroyRoom(testRoomId);
       await createTicTacToeRoom(testRoomId);
-      await joinTicTacToeRoom(testRoomId, "player-1"); // Only one player
+      const room = roomManager.getRoom(testRoomId);
+      if (room) room.addPlayer("player-1"); // Only one player
 
       const result = await startTicTacToeGame(testRoomId);
       expect(result.ok).toBe(false);
@@ -140,9 +109,12 @@ describe.skip("Tic-Tac-Toe Server Actions", () => {
 
   describe("submitTicTacToeMove", () => {
     beforeEach(async () => {
-      await createTicTacToeRoom(testRoomId, "owner-1");
-      await joinTicTacToeRoom(testRoomId, "player-1");
-      await joinTicTacToeRoom(testRoomId, "player-2");
+      await createTicTacToeRoom(testRoomId);
+      const room = roomManager.getRoom(testRoomId);
+      if (room) {
+          room.addPlayer("player-1");
+          room.addPlayer("player-2"); // X and O assigned
+      }
       await startTicTacToeGame(testRoomId);
     });
 

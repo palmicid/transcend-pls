@@ -102,9 +102,6 @@ const globalForBroadcaster = globalThis as unknown as {
 export const broadcaster =
   globalForBroadcaster.broadcaster ?? new InMemoryBroadcaster();
 
-// Preserve instance during development hot-reloads
-if (process.env.NODE_ENV !== "production") {
-  globalForBroadcaster.broadcaster = broadcaster;
-}
+globalForBroadcaster.broadcaster = broadcaster;
 
 export default InMemoryBroadcaster;

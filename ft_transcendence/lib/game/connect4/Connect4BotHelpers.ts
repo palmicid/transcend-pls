@@ -36,7 +36,7 @@ export { getBotDifficultyLabel };
 /**
  * Validate bot configuration options.
  */
-export function validateBotConfig(role: string, difficulty: number): void {
+export function validateBotConfig(role: string, difficulty: string): void {
   validateSharedBotConfig(role, difficulty, ["Red", "Yellow"]);
 }
 
