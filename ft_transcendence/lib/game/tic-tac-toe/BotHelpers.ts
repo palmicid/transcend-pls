@@ -45,7 +45,7 @@ export { getBotDifficultyLabel };
  * Validate bot configuration options.
  * Throws an error if configuration is invalid.
  */
-export function validateBotConfig(role: string, difficulty: number): void {
+export function validateBotConfig(role: string, difficulty: string): void {
   validateSharedBotConfig(role, difficulty, ["X", "O"]);
 }
 

@@ -1,4 +1,6 @@
 import type { ProfileGameSummary, ProfileUser } from "@/types/profile";
+import { XPBar } from "./XPBar";
+import { AchievementGrid } from "./AchievementGrid";
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
@@ -111,10 +113,18 @@ export function ProfileGameHistory({ user }: { user: ProfileUser }) {
         </div>
       </div>
 
+      {user.xp && (
+        <div className="mb-8">
+          <XPBar xp={user.xp} />
+        </div>
+      )}
+
       {stats ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <StatItem label="Total Games" value={String(stats.total)} />
-          <StatItem label="Record" value={`${stats.wins}-${stats.losses}-${stats.draws}`} />
+          <StatItem label="Wins" value={String(stats.wins)} />
+          <StatItem label="Losses" value={String(stats.losses)} />
+          <StatItem label="Draws" value={String(stats.draws)} />
           <StatItem label="Win Rate" value={`${stats.winRate}%`} />
           <StatItem label="Avg Duration" value={formatDuration(stats.averageDurationMs)} />
         </div>
@@ -142,12 +152,26 @@ export function ProfileGameHistory({ user }: { user: ProfileUser }) {
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/55">
                   <span>Ended {new Date(entry.endedAt).toLocaleDateString()}</span>
                   <span>Duration {formatDuration(entry.durationMs)}</span>
+                  {entry.playerRole && <span>Played as {entry.playerRole}</span>}
+                  {entry.xpEarned ? (
+                    <span className="text-indigo-400 font-medium">+{entry.xpEarned} XP</span>
+                  ) : null}
                 </div>
               </div>
 
               <BoardPreview entry={entry} />
             </article>
           ))}
+        </div>
+      )}
+
+      {user.achievements && user.achievements.length > 0 && (
+        <div className="pt-8 mt-8 border-t border-white/10">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-white/80">Achievements</h3>
+            <p className="text-xs text-white/50 mt-1">Unlock badges by playing and winning games.</p>
+          </div>
+          <AchievementGrid achievements={user.achievements} />
         </div>
       )}
     </section>

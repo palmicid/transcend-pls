@@ -4,6 +4,8 @@
  */
 
 import prisma from "@/lib/prisma";
+import { calculateXP, awardXP } from "@/lib/game/xpService";
+import { checkAndAwardAchievements } from "@/lib/game/achievementService";
 
 interface SaveGameResultParams {
   gameType: string;
@@ -63,21 +65,44 @@ export async function saveGameResult(params: SaveGameResultParams) {
 
   // Create the record
   try {
+    // Determine each player's outcome
+    const p1Result = isDraw ? "draw" : winnerId === players[0].id ? "win" : "loss";
+    const p2Result = isDraw ? "draw" : winnerId === players[1].id ? "win" : "loss";
+
+    const xpP1 = calculateXP(gameType, p1Result);
+    const xpP2 = calculateXP(gameType, p2Result);
+
     const result = await prisma.gameResult.create({
       data: {
         game_type: gameType,
         room_id: roomId,
         player1_id: players[0].id,
+        player1_role: players[0].role,
         player2_id: players[1].id,
+        player2_role: players[1].role,
         winner_id: winnerId,
         is_draw: isDraw,
         started_at: startedAt,
         duration_ms: Date.now() - new Date(startedAt).getTime(),
         final_board: finalBoard as any,
+        xp_awarded_p1: xpP1,
+        xp_awarded_p2: xpP2,
       },
     });
 
     console.log(`[saveGameResult] Saved game result: ${result.id}`);
+
+    // Award XP and check achievements (fire and forget pattern or await, here we await for simplicity)
+    await Promise.all([
+      awardXP(players[0].id, xpP1),
+      awardXP(players[1].id, xpP2),
+    ]);
+
+    await Promise.all([
+      checkAndAwardAchievements(players[0].id),
+      checkAndAwardAchievements(players[1].id),
+    ]);
+
     return result;
   } catch (error) {
     console.error("[saveGameResult] Failed to save result:", error);
