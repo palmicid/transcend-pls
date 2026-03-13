@@ -46,6 +46,8 @@ model User {
   // Progression
   xp            PlayerXP?
   achievements  UserAchievement[]
+
+  @@index([online_status, last_active_at])
 }
 
 // Friendships Model
