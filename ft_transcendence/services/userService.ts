@@ -24,7 +24,6 @@ export const userUpdateSchema = z.object({
 
 export const userService = {
     async getUserById(userId: number){
-        console.log("getuserbyid");
         return await prisma.user.findUnique({ 
             where: {id: userId},
             select: {
