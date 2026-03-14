@@ -13,8 +13,11 @@ export const userUpdateSchema = z.object({
         .optional(),
     password: z
         .string()
-        .min(4, {message: "password must be at least 4 characters"})
-        .regex(/^[\x21-\x7E]+$/, "Password contains invalid characters")
+        .min(8, {message: "Password must be at least 8 characters long"})
+        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+        .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+        .regex(/[0-9]/, "Password must contain at least one number")
+        .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character")
         .optional(),
     online_status: z.boolean("Invalid online_status value").optional(),
     is_verified: z.boolean("Invalid is_verified value").optional(),
@@ -27,7 +30,6 @@ import { getUserAchievements } from "@/lib/game/achievementService";
 
 export const userService = {
     async getUserById(userId: number){
-        console.log("getuserbyid");
         return await prisma.user.findUnique({ 
             where: {id: userId},
             select: {
