@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { MainLayout } from "@/components/layout/MainLayout";
 import FriendsClient from "@/components/friends/FriendsClient";
+import { isUserOnline } from "@/lib/onlineStatus";
 
 export default async function FriendsPage() {
   let userId: number;
@@ -26,6 +27,7 @@ export default async function FriendsPage() {
       email: true,
       display_name: true,
       online_status: true,
+      last_active_at: true,
     },
   });
 
@@ -33,7 +35,7 @@ export default async function FriendsPage() {
     id: u.id,
     email: u.email,
     displayName: u.display_name,
-    online: u.online_status,
+    online: isUserOnline(u.last_active_at),
   }));
 
   return (
