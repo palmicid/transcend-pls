@@ -6,20 +6,15 @@ export const runtime = "edge";
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "unknown";
 
-  const result = rateLimit(ip);
+  const limit = rateLimit(ip);
 
-  if (!result.allowed) {
-    return new Response(
-      JSON.stringify({
-        error: "Too many requests",
-        retryAfter: result.retryAfter,
-      }),
+  if (!limit.allowed) {
+    return Response.json(
       {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+        error: "Too many requests",
+        retryAfter: limit.retryAfter,
+      },
+      { status: 429 }
     );
   }
 
@@ -28,11 +23,18 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     prompt = body.prompt;
-
     if (!prompt) throw new Error();
   } catch {
     return new Response("Invalid input", { status: 400 });
   }
+
+  const controller = new AbortController();
+
+  req.signal.addEventListener("abort", () => {
+    try {
+      controller.abort();
+    } catch {}
+  });
 
   try {
     const res = await fetch("http://ollama:11434/v1/chat/completions", {
@@ -40,15 +42,11 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: "llama3",
         stream: true,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        messages: [{ role: "user", content: prompt }],
       }),
     });
 
@@ -58,7 +56,14 @@ export async function POST(req: NextRequest) {
         "Cache-Control": "no-cache",
       },
     });
-  } catch {
+  } catch (err: any) {
+    if (
+      err.name === "AbortError" ||
+      err.code === "ECONNRESET"
+    ) {
+      return new Response(null, { status: 499 });
+    }
+
     return new Response("LLM error", { status: 500 });
   }
 }

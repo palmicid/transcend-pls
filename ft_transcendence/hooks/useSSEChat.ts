@@ -14,6 +14,7 @@ export function useSSEChat() {
     onToken: (token: string) => void;
   }) {
     abortRef.current?.abort();
+
     const ac = new AbortController();
     abortRef.current = ac;
 
@@ -24,13 +25,12 @@ export function useSSEChat() {
       signal: ac.signal,
     });
 
-    // Detect rate limit
     if (res.status === 429) {
       const data = await res.json();
       throw new Error(`RATE_LIMIT:${data.retryAfter}`);
     }
 
-    if (!res.ok) {
+    if (!res.ok && res.status !== 499) {
       throw new Error("SERVER_ERROR");
     }
 
@@ -39,17 +39,26 @@ export function useSSEChat() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split("\n");
+        if (done) break;
 
-      for (const line of lines) {
-        const token = safeParseSSEToken(line);
-        if (token) onToken(token);
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          const token = safeParseSSEToken(line);
+          if (token) onToken(token);
+        }
       }
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        return;
+      }
+
+      throw err;
     }
   }
 

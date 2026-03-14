@@ -20,6 +20,7 @@ export default function LLMChatApp() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -50,15 +51,13 @@ export default function LLMChatApp() {
     } catch (err: any) {
       if (err.message.startsWith("RATE_LIMIT")) {
         const seconds = err.message.split(":")[1];
-        setAssistantError(
-          activeId,
-          `⚠️ Too many requests. Try again in ${seconds}s`
-        );
+        const msg = `Too many requests. Try again in ${seconds}s`;
+
+        setError(msg);
+        setAssistantError(activeId, msg);
       } else {
-        setAssistantError(
-          activeId,
-          "Sorry — something went wrong."
-        );
+        setError("Sorry — something went wrong.");
+        setAssistantError(activeId, "Sorry — something went wrong.");
       }
     } finally {
       setLoading(false);
@@ -84,6 +83,7 @@ export default function LLMChatApp() {
         onStop={onStop}
         onNewMobile={createNew}
         bottomRef={bottomRef}
+        error={error}
       />
     </div>
   );
