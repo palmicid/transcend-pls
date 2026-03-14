@@ -19,7 +19,7 @@ This project also emphasizes frontend quality and user experience. A custom-made
 
 - extends time remaining until being absorbed by blackhole
 - upon completion, advances all team members into 42's Advanced Core Cursus
-- 2-factor authentication with Google OAuth
+- 2-factor authentication with Google, 42, Github OAuth
 - Chat with our in-house local model (ollama)
 - Play games with your friends remotely!
 - Custom-made frontend design system with reusable components
@@ -60,9 +60,13 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Developed a challenging AI opponent with human-like behavior (non-perfect play) for single-player matches
 - Added a second game with matchmaking, user match history, and gameplay statistics tracking
 
-### pjerddee (Role)
+### pjerddee (Authentication & Security Management)
 
-- Responsibility 1
+- Integrated Google, 42, and GitHub OAuth to provide flexible and secure user onboarding options
+- Developed a 2FA security layer to enhance account protection and prevent unauthorized access
+- Managed stateless session handling using JSON Web Tokens (JWT) for secure and scalable user authorization
+- Implemented Next.js middleware to centralize global route protection and session validation logic.
+- Deployed API routes for managing user and friendship systems.
 
 ### pnamwayk (Frontend Developer)
 
