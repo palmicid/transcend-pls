@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/auth-session";
 import prisma from "@/lib/prisma";
-
-const INACTIVITY_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
+import { INACTIVITY_THRESHOLD_MS } from "@/lib/onlineStatus";
 
 export async function POST() {
   try {

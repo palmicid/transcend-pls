@@ -5,6 +5,35 @@ import { uploadAvatar } from "@/lib/minio";
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png"];
 
+/*
+Detect the actual MIME type by reading the file's magic bytes.
+Returns the MIME type string if recognised, or null otherwise.
+*/
+function detectMimeType(buffer: Buffer): string | null {
+    if (buffer.length < 4) return null;
+
+    // PNG: first 4 bytes are 89 50 4E 47
+    if (
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4E &&
+        buffer[3] === 0x47
+    ) {
+        return "image/png";
+    }
+
+    // JPEG: first 3 bytes are FF D8 FF
+    if (
+        buffer[0] === 0xFF &&
+        buffer[1] === 0xD8 &&
+        buffer[2] === 0xFF
+    ) {
+        return "image/jpeg";
+    }
+
+    return null;
+}
+
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -43,9 +72,19 @@ export async function POST(
             );
         }
 
-        // Convert to buffer and upload to MinIO
+        // Convert to buffer
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+
+        // Validate actual file content via magic bytes
+        const detectedMime = detectMimeType(buffer);
+        if (!detectedMime || !ALLOWED_TYPES.includes(detectedMime)) {
+            return NextResponse.json(
+                { error: "File content is corrupted or not an image or not supported" },
+                { status: 400 }
+            );
+        }
+
         const avatarUrl = await uploadAvatar(userId, buffer, file.type);
 
         // Update user's avatar_url in the database
