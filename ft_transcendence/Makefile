@@ -24,6 +24,9 @@ COMPOSE_DEV     := docker-compose.dev.yml
 COMPOSE_PROD    := docker-compose.prod.yml
 COMPOSE_OLLAMA  := docker-compose.ollama.yml
 COMPOSE_NGINX   := docker-compose.nginx.yml
+COMPOSE_LOGGING	:= docker-compose.logging.yml
+COMPOSE_LOGSETUP := docker-compose.logsetting.yml
+
 
 # Project name
 PROJECT_NAME := ft_transcendence
@@ -75,12 +78,20 @@ help: ## Show this help message
 	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)"
 
 # ============================================================================
+# Logging Environment
+# ============================================================================
+
+.PHONY: logging
+logging:
+	docker compose -f docker-compose.logging.yml up -d
+
+# ============================================================================
 # Development Environment
 # ============================================================================
 .PHONY: dev
 dev: ## Run development environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting development environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
