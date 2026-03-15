@@ -89,9 +89,10 @@ logging:
 # Development Environment
 # ============================================================================
 .PHONY: dev
-dev: ## Run development environment with Ollama (default)
+dev:  ## Run development environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting development environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING)-f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
@@ -101,7 +102,8 @@ dev-detached: ## Run development environment with Ollama in background
 .PHONY: dev-no-ollama
 dev-no-ollama: ## Run development environment without Ollama
 	@echo "$(GREEN)🚀 Starting development environment (without Ollama)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev up --build
 
 .PHONY: dev-no-ollama-detached
 dev-no-ollama-detached: ## Run development environment without Ollama in background
@@ -112,17 +114,19 @@ dev-no-ollama-detached: ## Run development environment without Ollama in backgro
 # Production Environment
 # ============================================================================
 .PHONY: prod
-prod: ## Run production environment with Ollama (default)
+prod:  ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile prod --profile ollama up --build -d
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod --profile ollama up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost:8443$(RESET)"
-	@echo "$(CYAN)   Ollama:  https://localhost:11434$(RESET)"
+	@echo "$(CYAN)   Kibana:  https://localhost:8443/kibana/$(RESET)"
 
 .PHONY: prod-no-ollama
 prod-no-ollama: ## Run production environment without Ollama
 	@echo "$(GREEN)🚀 Starting production environment (without Ollama)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) --profile prod up --build -d
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost$(RESET)"
 
@@ -146,8 +150,9 @@ build-no-ollama: ## Build Docker images without Ollama
 .PHONY: stop
 stop: ## Stop all running containers
 	@echo "$(YELLOW)⏹️  Stopping all containers...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_PROD) -f $(COMPOSE_DEV) down --remove-orphans
+	## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_PROD) -f $(COMPOSE_DEV) down --remove-orphans
 	docker compose down --remove-orphans
+	docker network prune -f
 	@echo "$(GREEN)✅ All containers stopped$(RESET)"
 
 .PHONY: restart
@@ -294,6 +299,7 @@ setup: install ## Initial project setup
 
 .PHONY: all
 all: dev-detached  ## Build and run development environment
+	sleep 5
 	docker exec nextjs-app-dev npx prisma db push
 	docker exec nextjs-app-dev npx prisma generate
 	make stop
@@ -302,6 +308,7 @@ all: dev-detached  ## Build and run development environment
 .PHONY: all-no-ollama
 all-no-ollama:
 	make dev-no-ollama-detached
+	sleep 5
 	docker exec nextjs-app-dev npx prisma db push
 	docker exec nextjs-app-dev npx prisma generate
 	make stop
