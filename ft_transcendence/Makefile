@@ -96,8 +96,9 @@ dev:  ## Run development environment with Ollama (default)
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
+	docker network create elk
 	@echo "$(GREEN)🚀 Starting development environment with Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build -d
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build -d
 
 .PHONY: dev-no-ollama
 dev-no-ollama: ## Run development environment without Ollama
@@ -150,7 +151,7 @@ build-no-ollama: ## Build Docker images without Ollama
 .PHONY: stop
 stop: ## Stop all running containers
 	@echo "$(YELLOW)⏹️  Stopping all containers...$(RESET)"
-	## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_PROD) -f $(COMPOSE_DEV) down --remove-orphans
+## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_PROD) -f $(COMPOSE_DEV) down --remove-orphans
 	docker compose down --remove-orphans
 	docker network prune -f
 	@echo "$(GREEN)✅ All containers stopped$(RESET)"
@@ -167,7 +168,8 @@ clean: ## Remove containers, networks, and volumes
 .PHONY: fclean
 fclean: ## Full clean (containers, volumes, and images)
 	@echo "$(RED)🧹 Full cleanup (containers, volumes, images)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v --rmi all
+## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v --rmi all
+	docker compose down -v --rmi all
 	@echo "$(GREEN)✅ Full cleanup complete$(RESET)"
 
 .PHONY: prune
