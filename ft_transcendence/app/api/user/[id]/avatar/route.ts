@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { uploadAvatar } from "@/lib/minio";
+import { getSession } from "@/lib/auth/auth-session";
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png"];
@@ -43,6 +44,11 @@ export async function POST(
 
     if (isNaN(userId)) {
         return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
+
+    const session = await getSession();
+    if (!session || session?.userId !== userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
