@@ -15,7 +15,11 @@ export function useHeartbeat() {
   useEffect(() => {
     const sendHeartbeat = async () => {
       // Only send if the tab is visible
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible")
+        return;
+      // Skip if user is not authenticated (not login)
+      if (!document.cookie.split("; ").some((c) => c.startsWith("auth_token=")))
+        return;
       try {
         const res = await fetch("/api/auth/heartbeat", { method: "POST" });
         if (!res.ok) {
