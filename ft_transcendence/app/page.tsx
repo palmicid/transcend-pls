@@ -59,7 +59,7 @@ export default function WelcomePage() {
 //         <div className="grid gap-6 md:grid-cols-2">
 //           {/* Game Lobby Card */}
 //           <Link
-//             href="/lobby"
+//             href="/play"
 //             className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 p-6 transition-all duration-300 hover:scale-[1.02] hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-500/20"
 //           >
 //             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />

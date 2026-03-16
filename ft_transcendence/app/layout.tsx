@@ -32,7 +32,7 @@ export default function RootLayout({
           <nav className="p-4 border-b flex gap-4 text-white">
             <Link href="/">Home</Link>
             <Link href="/llm">AI Assistant</Link>
-            <Link href="/lobby">Tic-Tac-Toe</Link>
+            <Link href="/play">Tic-Tac-Toe</Link>
           </nav>
           {children}
         </HeartbeatProvider>

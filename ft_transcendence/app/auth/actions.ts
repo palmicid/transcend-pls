@@ -25,7 +25,7 @@ export async function loginUser(userId: string): Promise<void> {
   }
 
   await setUserId(parsedUserId);
-  redirect("/lobby");
+  redirect("/play");
 }
 
 export async function logoutUser(): Promise<void> {

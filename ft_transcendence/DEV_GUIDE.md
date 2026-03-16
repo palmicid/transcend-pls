@@ -221,7 +221,7 @@ Test files are located in `__tests__/`:
 
 #### Single Player Testing
 
-1. Open `http://localhost:3000/lobby`
+1. Open `http://localhost:3000/play`
 2. Create room with ID `TEST1`, Type `Tic-Tac-Toe`
 3. Join as any player name
 4. Click Start Game
