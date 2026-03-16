@@ -85,6 +85,16 @@ help: ## Show this help message
 logging:
 	docker compose -f docker-compose.logging.yml up -d
 
+.PHONY: reset-kibana-pwd
+reset-kibana-pwd:
+	@echo "Resetting Kibana system password..."
+	$(eval NEW_PWD := $(shell docker exec elasticsearch bin/elasticsearch-reset-password -u kibana_system --silent --batch))
+	@if [ -z "$(NEW_PWD)" ]; then \
+		echo "Error: Failed to retrieve new password."; exit 1; \
+	fi
+	@sed -i 's|^KIBANA_PASSWORD=.*|KIBANA_PASSWORD=$(NEW_PWD)|' .env
+	@echo "Success! KIBANA_PASSWORD updated in .env"
+
 # ============================================================================
 # Development Environment
 # ============================================================================
@@ -119,6 +129,8 @@ prod:  ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
 	docker network create elk
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod --profile ollama up --build -d
+	@echo "Waiting for services to stabilize..."
+	@sleep 10
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost:8443$(RESET)"
 	@echo "$(CYAN)   Kibana:  https://localhost:8443/kibana/$(RESET)"
@@ -301,16 +313,19 @@ setup: install ## Initial project setup
 
 .PHONY: all
 all: dev-detached  ## Build and run development environment
-	sleep 5
+	@echo "Waiting for services to stabilize..."
+	@sleep 10
 	docker exec nextjs-app-dev npx prisma db push
 	docker exec nextjs-app-dev npx prisma generate
+	make reset-kibana-pwd
 	make stop
 	make prod
 
 .PHONY: all-no-ollama
 all-no-ollama:
 	make dev-no-ollama-detached
-	sleep 5
+	@echo "Waiting for services to stabilize..."
+	@sleep 10
 	docker exec nextjs-app-dev npx prisma db push
 	docker exec nextjs-app-dev npx prisma generate
 	make stop
