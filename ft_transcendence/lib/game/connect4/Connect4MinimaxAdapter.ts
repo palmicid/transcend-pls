@@ -8,9 +8,8 @@
  *  - A window's value depends on how many bot / opponent pieces it contains:
  *      3 bot   + 1 empty → +50   (one move from winning)
  *      2 bot   + 2 empty → +10   (building threat)
- *      3 opp   + 1 empty → −80   (must block — slightly higher magnitude
- *                                  than attack so blocking is preferred)
- *      2 opp   + 2 empty → −10   (opponent building threat)
+ *      3 opp   + 1 empty → −140  (must block — much higher than attack)
+ *      2 opp   + 2 empty → −18   (opponent building threat)
  *  - Mixed windows (both colours present) are worth 0 — neither side can
  *    complete them, so they are irrelevant.
  *  - Center column control still adds +3 per bot piece (positional bonus).
@@ -58,12 +57,11 @@ function scoreWindow(
 	if (botCount === 3) return 50; // One move from winning
 	if (botCount === 2) return 10; // Building
 
-	// Opponent-favourable — blocking pressure is weighted slightly higher
-	// than attacking so the bot will always prefer to block a 3-in-a-row
-	// before extending its own 2-in-a-row.
+	// Opponent-favourable — blocking pressure is weighted much higher
+	// than attacking so risky lines are punished aggressively.
 	if (oppCount === 4) return -1000; // Terminal loss (fallback)
-	if (oppCount === 3) return -80; // Must block
-	if (oppCount === 2) return -10; // Opponent building
+	if (oppCount === 3) return -140; // Must block immediately
+	if (oppCount === 2) return -18; // Opponent building
 
 	return 0;
 }

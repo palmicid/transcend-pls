@@ -46,6 +46,7 @@ model User {
   // Progression
   xp            PlayerXP?
   achievements  UserAchievement[]
+  matchmakingEntries MatchmakingQueue[]
 }
 
 // Friendships Model
@@ -134,6 +135,7 @@ model GameResult {
   is_draw   Boolean @default(false)
 
   duration_ms Int?
+  is_bot_game   Boolean @default(false) // true if opponent was a bot
   xp_awarded_p1 Int @default(0)   // XP player1 earned from this game
   xp_awarded_p2 Int @default(0)   // XP player2 earned from this game
 
@@ -169,5 +171,20 @@ model UserAchievement {
   unlocked_at    DateTime @default(now())
 
   @@unique([user_id, achievement_id]) // prevent double-unlocking
+  @@index([user_id])
+}
+
+model MatchmakingQueue {
+  id              Int       @id @default(autoincrement())
+  user_id         Int
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  game_type       String
+  status          String    @default("WAITING") // WAITING, MATCHED, CANCELLED, EXPIRED
+  matched_room_id String?   // Room ID when match is found
+  joined_at       DateTime  @default(now())
+  matched_at      DateTime?
+
+  @@unique([user_id, game_type, status]) // One active queue per user per game
+  @@index([game_type, status])
   @@index([user_id])
 }

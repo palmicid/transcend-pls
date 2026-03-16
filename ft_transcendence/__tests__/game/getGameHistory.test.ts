@@ -21,14 +21,20 @@ describe('getGameHistory', () => {
         id: 10,
         game_type: 'tic-tac-toe',
         room_id: 'room-10',
+        player1_id: 1,
+        player2_id: 2,
         winner_id: 1,
         is_draw: false,
         duration_ms: 120000,
         started_at: new Date('2026-03-10T10:00:00Z'),
         ended_at: new Date('2026-03-10T10:02:00Z'),
         final_board: ['X', 'O', 'X', 'O', 'X', null, null, null, null],
-        player1: { id: 1, display_name: 'Alice' },
-        player2: { id: 2, display_name: 'Bob' },
+        player1: { id: 1, display_name: 'Alice', avatar_url: 'https://example.com/a.png' },
+        player2: { id: 2, display_name: 'Bob', avatar_url: 'https://example.com/b.png' },
+        player1_role: 'X',
+        player2_role: 'O',
+        xp_awarded_p1: 15,
+        xp_awarded_p2: 5,
       },
     ]);
 
@@ -46,8 +52,10 @@ describe('getGameHistory', () => {
         startedAt: new Date('2026-03-10T10:00:00Z'),
         endedAt: new Date('2026-03-10T10:02:00Z'),
         result: 'win',
-        opponent: { id: 2, displayName: 'Bob' },
+        opponent: { id: 2, displayName: 'Bob', avatarUrl: 'https://example.com/b.png' },
         finalBoard: ['X', 'O', 'X', 'O', 'X', null, null, null, null],
+        playerRole: 'X',
+        xpEarned: 15,
       },
     ]);
   });
@@ -58,14 +66,20 @@ describe('getGameHistory', () => {
         id: 11,
         game_type: 'connect4',
         room_id: 'room-11',
+        player1_id: 1,
+        player2_id: 2,
         winner_id: 1,
         is_draw: false,
         duration_ms: 45000,
         started_at: new Date('2026-03-10T11:00:00Z'),
         ended_at: new Date('2026-03-10T11:00:45Z'),
         final_board: [['Red']],
-        player1: { id: 1, display_name: 'Alice' },
-        player2: { id: 2, display_name: 'Bob' },
+        player1: { id: 1, display_name: 'Alice', avatar_url: null },
+        player2: { id: 2, display_name: 'Bob', avatar_url: null },
+        player1_role: 'Red',
+        player2_role: 'Yellow',
+        xp_awarded_p1: 20,
+        xp_awarded_p2: 5,
       },
     ]);
 
@@ -73,8 +87,10 @@ describe('getGameHistory', () => {
 
     expect(history[0]).toMatchObject({
       result: 'loss',
-      opponent: { id: 1, displayName: 'Alice' },
+      opponent: { id: 1, displayName: 'Alice', avatarUrl: null },
       finalBoard: [['Red']],
+      playerRole: 'Yellow',
+      xpEarned: 5,
     });
   });
 });

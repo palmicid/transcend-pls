@@ -20,6 +20,11 @@ vi.mock("@/lib/prisma", () => ({
     room: {
       update: vi.fn(),
       findUnique: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
+    user: {
+      findUnique: vi.fn(),
     },
     roomPlayer: {
       findMany: vi.fn(() => []),
@@ -54,8 +59,13 @@ describe.skip("Tic-Tac-Toe Server Actions", () => {
   // ===========================================================================
 
   describe("createTicTacToeRoom", () => {
-    it("should create a room with game attached", async () => {
-      const result = await createTicTacToeRoom(testRoomId);
+    it("should create a room and attach game", async () => {
+      // @ts-ignore - Mocking prisma default export
+      prisma.user.findUnique.mockResolvedValue({ id: 123, displayName: "Test User" });
+      // @ts-ignore - Mocking prisma default export
+      prisma.room.create.mockResolvedValue({ id: 'room-new', game_type: 'tic-tac-toe' });
+
+      const result = await createTicTacToeRoom('room-new');
       expect(result.ok).toBe(true);
       expect(result.roomId).toBe(testRoomId);
 

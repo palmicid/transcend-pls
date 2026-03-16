@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/auth-session";
-import { getLeaderboard, getUserRank } from "@/lib/game/leaderboardService";
-import prisma from "@/lib/prisma";
+import {
+  getLeaderboard,
+  getLeaderboardTotalCount,
+  getUserRank,
+  type LeaderboardSortBy,
+} from "@/lib/game/leaderboardService";
 
 export async function GET(req: Request) {
   const session = await getSession();
@@ -12,11 +16,14 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const limit = Math.min(Number(searchParams.get("limit")) || 20, 100);
   const offset = Number(searchParams.get("offset")) || 0;
+  const sortByParam = searchParams.get("sortBy");
+  const sortBy: LeaderboardSortBy =
+    sortByParam === "ttt" || sortByParam === "c4" ? sortByParam : "xp";
 
   const [entries, total, myRank] = await Promise.all([
-    getLeaderboard({ limit, offset }),
-    prisma.playerXP.count(),
-    getUserRank(session.userId),
+    getLeaderboard({ limit, offset, sortBy }),
+    getLeaderboardTotalCount(sortBy),
+    getUserRank(session.userId, sortBy),
   ]);
 
   return NextResponse.json({ entries, total, myRank });

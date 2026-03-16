@@ -246,6 +246,8 @@ export default class Room {
   // GAME FLOW CONTROL
   // ===========================================================================
 
+  startedAt: Date | null = null;
+
   /**
    * Start the game.
    *
@@ -278,6 +280,7 @@ export default class Room {
       return false;
     }
 
+    this.startedAt = new Date(); // Track actual game start time
     this._game.startGame();
     this.broadcastSnapshot();
     return true;

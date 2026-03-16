@@ -13,6 +13,7 @@ import { GameRegistry } from "@/lib/game/GameRegistry";
 import { getBotDisplayName } from "@/lib/bot/botHelpers";
 import { saveGameResult } from "@/lib/game/saveGameResult";
 import logger from "@/lib/logger";
+import { generateRoomId } from "@/lib/utils/roomId";
 
 async function requestSaveOnGameEnd(
 	roomId: string,
@@ -77,6 +78,10 @@ async function requestSaveOnGameEnd(
 		playerCount: roomPlayers.length,
 	});
 
+	const inMemoryRoom = roomManager.getRoom(roomId);
+	const actualStartedAt = inMemoryRoom?.startedAt ?? dbRoom.created_at;
+	const isBotGame = Boolean(dbRoom.bot_role && dbRoom.bot_difficulty);
+
 	const persistedResult = await saveGameResult({
 		gameType: gameId,
 		roomId,
@@ -86,8 +91,9 @@ async function requestSaveOnGameEnd(
 		})),
 		winnerRole: winner,
 		isDraw,
-		startedAt: dbRoom.created_at,
+		startedAt: actualStartedAt,
 		finalBoard: snapshot.board,
+		isBotGame,
 	});
 
 	if (persistedResult) {
@@ -233,7 +239,7 @@ export async function createGameRoom(
 	if (!user) return { ok: false, error: "User not found" };
 
 	try {
-		const roomId = `room-${Math.random().toString(36).substring(2, 9)}`;
+		const roomId = generateRoomId();
 
 		const room = await roomManager.createRoomRecord({
 			id: roomId,

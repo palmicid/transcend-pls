@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { MainLayout } from "@/components/layout/MainLayout";
+import PlayLeaderboardPanel from "@/components/game/PlayLeaderboardPanel";
 import Link from "next/link";
-import { Circle, X, Gamepad2, ArrowRight } from "lucide-react";
+import { Circle, X, Gamepad2, ArrowLeft, ArrowRight } from "lucide-react";
 
 export default async function PlayPage() {
   try {
@@ -19,11 +20,18 @@ export default async function PlayPage() {
           <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
 
           <div className="relative">
+            <Link
+              href="/main"
+              className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition mb-4"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Game Lobby 🎮
             </h1>
             <p className="mt-2 text-white/70 max-w-2xl">
-              Choose a game to play with friends or challenge yourself against others.
+              Choose a game to play with friends or challenge yourself against bots.
             </p>
           </div>
         </div>
@@ -86,6 +94,11 @@ export default async function PlayPage() {
             </div>
           </div>
         </Link>
+
+      </section>
+
+      <section className="mt-6 max-w-4xl">
+        <PlayLeaderboardPanel />
       </section>
     </MainLayout>
   );

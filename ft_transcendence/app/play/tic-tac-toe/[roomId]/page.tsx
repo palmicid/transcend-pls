@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { getSession } from "@/lib/auth/auth-session";
 import { getRoomMeta } from "@/app/play/actions";
+import { isValidRoomId } from "@/lib/utils/roomId";
 import { MainLayout } from "@/components/layout/MainLayout";
 import RoomView, { GameType } from "./RoomView";
 
@@ -13,6 +14,10 @@ type PageProps = {
 export default async function RoomPage({ params, searchParams }: PageProps) {
   const { roomId } = await params;
   const resolvedSearch = searchParams ? await searchParams : undefined;
+
+  if (!isValidRoomId(roomId)) {
+    notFound();
+  }
 
   let userId: number;
   try {
@@ -28,7 +33,7 @@ export default async function RoomPage({ params, searchParams }: PageProps) {
 
   const meta = await getRoomMeta(roomId);
   if (!meta) {
-    throw new Error("Room not found");
+    notFound();
   }
 
   const requestedGame = resolvedSearch?.game === "tic-tac-toe" ? "tic-tac-toe" : undefined;

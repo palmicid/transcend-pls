@@ -14,6 +14,9 @@ import { roomManager } from "@/lib/rooms";
 import { broadcaster } from "@/lib/broadcast";
 import { GameRegistry } from "@/lib/game/GameRegistry";
 import { getTotalPlayerCount } from "@/lib/bot/botHelpers";
+import { loadAndValidateRoom } from "@/lib/rooms";
+import { State } from "@/lib/rooms/RoomState";
+import { matchmakingService } from "@/lib/matchmaking/MatchmakingService";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -51,7 +54,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const existingPlayer = room.players.find(
       (p: { user_id: number; role: string | null }) => p.user_id === session.userId
     );
-    if (!existingPlayer && room.players.length >= room.max_players) {
+    const matchmakingStatus = matchmakingService.getStatus(session.userId, room.game_type);
+    const isMatchedRoom =
+      matchmakingStatus.status === "MATCHED" &&
+      matchmakingStatus.matchedRoomId === roomId;
+    const reservedRole = matchmakingStatus.matchedRole ?? null;
+
+    if (!existingPlayer && !isMatchedRoom && room.players.length >= room.max_players) {
       return NextResponse.json({ error: "Room is full" }, { status: 403 });
     }
 
@@ -68,7 +77,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
         room.bot_role,
         room.bot_difficulty
       );
-      if (currentPlayers >= room.max_players) {
+      if (currentPlayers >= room.max_players && !isMatchedRoom) {
         return NextResponse.json({ error: "Room is full" }, { status: 403 });
       }
 
@@ -77,13 +86,28 @@ export async function GET(req: NextRequest, context: RouteContext) {
         takenRoles.add(room.bot_role);
       }
 
-      playerRole = gameDef.roles.find((role) => !takenRoles.has(role)) ?? null;
+      if (reservedRole) {
+        if (takenRoles.has(reservedRole)) {
+          return NextResponse.json({ error: "Matched role is no longer available" }, { status: 409 });
+        }
+        playerRole = reservedRole;
+      } else {
+        playerRole = gameDef.roles.find((role) => !takenRoles.has(role)) ?? null;
+      }
+
       if (!playerRole) {
         return NextResponse.json({ error: "No available role" }, { status: 409 });
       }
 
-      await prisma.roomPlayer.create({
-        data: {
+      await prisma.roomPlayer.upsert({
+        where: {
+          room_id_user_id: {
+            room_id: room.id,
+            user_id: session.userId,
+          },
+        },
+        update: { role: playerRole },
+        create: {
           room_id: room.id,
           user_id: session.userId,
           role: playerRole,
@@ -106,17 +130,24 @@ export async function GET(req: NextRequest, context: RouteContext) {
       playerRole = existingPlayer.role;
     }
 
-    // Sync with in-memory room manager for SSE
-    const inMemoryRoom = roomManager.ensureRoom(roomId, broadcaster);
-    if (!inMemoryRoom.gameType) {
-      const gameDef = GameRegistry.get(room.game_type);
-      if (gameDef) {
-        const game = gameDef.createGame();
-        game.init();
-        roomManager.attachGame(roomId, game, broadcaster, room.owner_id.toString());
-      }
+    // Hydrate the room from persisted state instead of constructing a fresh in-memory room.
+    const hydratedRoom = await loadAndValidateRoom(roomId);
+    if (!hydratedRoom) {
+      return NextResponse.json({ error: "Failed to load room" }, { status: 500 });
     }
-    roomManager.addPlayer(roomId, session.userId.toString());
+
+    hydratedRoom.attachBroadcaster(broadcaster);
+
+    const totalPlayers = getTotalPlayerCount(
+      updatedRoomPlayerCount(room.players.length, existingPlayer),
+      room.bot_role,
+      room.bot_difficulty
+    );
+
+    if (hydratedRoom.status === State.OPEN && totalPlayers >= room.max_players) {
+      hydratedRoom.setStatus(State.READY);
+      await roomManager.persistStateToDb(roomId);
+    }
 
     // Generate SSE token
     const sseToken = await generateSSEToken(room.id, session.userId);
@@ -157,6 +188,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
+}
+
+function updatedRoomPlayerCount(existingCount: number, existingPlayer: { user_id: number; role: string | null } | undefined): number {
+  return existingPlayer ? existingCount : existingCount + 1;
 }
 
 /**

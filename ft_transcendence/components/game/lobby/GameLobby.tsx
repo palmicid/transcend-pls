@@ -1,21 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { RoomInfo } from "@/types/game";
-import { ArrowLeft, Plus, RefreshCw, Trash2, Users, LogIn } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Trash2, Users, LogIn, Globe, HelpCircle, Loader2, X } from "lucide-react";
 import Link from "next/link";
+import { generateRoomId } from "@/lib/utils/roomId";
+
+import useMatchmakingSSE from "@/hooks/useMatchmakingSSE";
+import PlayVsBotCard from "./PlayVsBotCard";
+import MatchmakingPanel from "./MatchmakingPanel";
 
 interface GameLobbyProps {
-	gameId: string;
+	gameType: string;
 	userId: string;
-	displayName: string;
+	rooms: RoomInfo[];
+	loading: boolean;
 	actions: {
-		listRooms: () => Promise<RoomInfo[]>;
-		createRoom: (
-			roomId?: string,
-		) => Promise<{ ok: boolean; roomId?: string; error?: string }>;
-		deleteRoom: (roomId: string, userId: string) => Promise<{ ok: boolean }>;
+		onJoinQueue: () => Promise<void>;
+		onLeaveQueue: () => Promise<void>;
+		isSearching: boolean;
+		onRefresh: () => Promise<void>;
+		onJoinRoom: (roomId: string) => void;
+		onCreateRoom: (roomId: string) => Promise<void>;
+		onPlayBot: (difficulty: string) => Promise<void>;
+		onDeleteRoom: (roomId: string) => Promise<void>;
 	};
 	metadata: {
 		name: string;
@@ -24,205 +32,259 @@ interface GameLobbyProps {
 	};
 }
 
-export default function GameLobby({
-	gameId,
-	userId,
-	displayName,
-	actions,
-	metadata,
-}: GameLobbyProps) {
-	const router = useRouter();
-	const [rooms, setRooms] = useState<RoomInfo[]>([]);
-	const [newRoomId, setNewRoomId] = useState("");
-	const [loading, setLoading] = useState(false);
+const GAME_RULES: Record<string, { title: string; rules: string[] }> = {
+	"tic-tac-toe": {
+		title: "How to Play Tic-Tac-Toe",
+		rules: [
+			"Players take turns placing X or O on a 3×3 grid.",
+			"The first player to get 3 of their marks in a row (horizontal, vertical, or diagonal) wins.",
+			"If all 9 squares are filled without a winner, it's a draw.",
+		],
+	},
+	connect4: {
+		title: "How to Play Connect 4",
+		rules: [
+			"Players take turns dropping colored discs into a 7×6 grid.",
+			"Discs fall to the lowest available slot in the chosen column.",
+			"The first player to connect 4 discs in a row (horizontal, vertical, or diagonal) wins.",
+			"If the board fills up with no winner, it's a draw.",
+		],
+	},
+};
 
-	const loadRooms = async () => {
-		const roomList = await actions.listRooms();
-		setRooms(roomList);
-	};
+export default function GameLobby({ gameType, userId, rooms, loading, actions, metadata }: GameLobbyProps) {
+	const queueState = useMatchmakingSSE(gameType, actions.isSearching);
+	const [localLoading, setLocalLoading] = useState(false);
+	const [showRulesModal, setShowRulesModal] = useState(false);
 
-	useEffect(() => {
-		loadRooms();
-	}, []);
+	const rules = GAME_RULES[gameType];
+	const controlsLocked = actions.isSearching;
+	const lockedClassName = controlsLocked ? "opacity-60 blur-[1px] pointer-events-none select-none" : "";
 
 	const handleCreateRoom = async () => {
-		const roomIdToCreate =
-			newRoomId.trim() || `room-${Math.random().toString(36).substring(2, 9)}`;
-
-		setLoading(true);
+		setLocalLoading(true);
 		try {
-			const result = await actions.createRoom(roomIdToCreate);
-			if (result.ok && result.roomId) {
-				setNewRoomId("");
-				await loadRooms();
-				// Optional: Auto-join?
-			} else {
-				alert(result.error || "Failed to create room");
-			}
+			const roomId = generateRoomId();
+			await actions.onCreateRoom(roomId);
 		} catch (error) {
-			console.error("Failed to create room:", error);
-			alert("Failed to create room");
+			console.error("Create room error:", error);
 		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleJoinRoom = (room: RoomInfo) => {
-		router.push(`/play/${metadata.urlSlug}/${room.id}`);
-	};
-
-	const handleDeleteRoom = async (room: RoomInfo) => {
-		if (!confirm("Are you sure you want to delete this room?")) return;
-
-		setLoading(true);
-		try {
-			const { ok } = await actions.deleteRoom(room.id, userId);
-			if (!ok) {
-				alert("Only the room owner can delete this room");
-			}
-			await loadRooms();
-		} finally {
-			setLoading(false);
+			setLocalLoading(false);
 		}
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 sm:space-y-8 pb-10">
 			{/* Header */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex items-center gap-3">
+			<div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 overflow-hidden relative">
+				<div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
+				<div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+
+				<div className="relative">
 					<Link
 						href="/play"
-						className="rounded-2xl border border-white/10 bg-white/5 p-2 hover:bg-white/15 transition"
+						className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition mb-4"
 					>
-						<ArrowLeft className="h-5 w-5" />
+						<ArrowLeft className="h-4 w-4" />
+						All Games
 					</Link>
-					<div>
-						<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-							{metadata.name} Lobby
-						</h1>
-						<p className="text-sm text-white/60">{metadata.description}</p>
-					</div>
-				</div>
-				<div className="flex items-center gap-2">
-					<span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-						Playing as:{" "}
-						<span className="font-semibold text-cyan-300">{displayName}</span>
-					</span>
+					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+						{metadata.name}
+					</h1>
+					<p className="mt-2 text-white/70 max-w-2xl">
+						{metadata.description}
+					</p>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Create Room Panel */}
-				<div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-					<h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-						<Plus className="h-5 w-5 text-cyan-400" />
-						Create Room
-					</h2>
-					<div className="space-y-4">
-						{/* Room Name Input */}
-						{/* (Simplified for brevity, can match TTT lobby exact styling) */}
-						<div>
-							<label className="block text-sm font-medium text-white/70 mb-2">
-								Room Name
-							</label>
-							<input
-								type="text"
-								placeholder="Leave empty to auto-generate"
-								value={newRoomId}
-								onChange={(e) => setNewRoomId(e.target.value)}
-								className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
-								disabled={loading}
-							/>
-						</div>
+			<div className="flex justify-end">
+				<button
+					onClick={() => setShowRulesModal(true)}
+					className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/70 hover:bg-white/[0.06] transition"
+				>
+					<HelpCircle className="h-4 w-4 text-cyan-400" />
+					Rules & Examples
+				</button>
+			</div>
 
+			{/* CTA Row: Quick Match | Play vs Bot | Create Private Room */}
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+					<MatchmakingPanel
+						isSearching={actions.isSearching}
+						queueState={queueState}
+						onJoinQueue={actions.onJoinQueue}
+						onLeaveQueue={actions.onLeaveQueue}
+						loading={loading}
+					/>
+
+					<div className={lockedClassName}>
+						<PlayVsBotCard
+							onPlayBot={actions.onPlayBot}
+							loading={loading}
+							disabled={controlsLocked}
+						/>
+					</div>
+
+					<div className={`rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 h-full ${lockedClassName}`}>
+						<h2 className="text-lg font-semibold tracking-tight mb-1">Create Private Room</h2>
+						<p className="text-sm text-white/50 mb-4">
+							Generate a room code and invite a friend to join.
+						</p>
 						<button
 							onClick={handleCreateRoom}
-							disabled={loading}
-							className="w-full rounded-2xl bg-white px-4 py-3 font-semibold text-zinc-950 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+							disabled={loading || localLoading || controlsLocked}
+							className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 font-semibold text-zinc-950 hover:opacity-90 transition disabled:opacity-50"
 						>
-							{loading ? "Creating..." : "Create Room"}
+							<Plus className="h-4 w-4" />
+							{localLoading ? "Creating..." : "Create Room"}
 						</button>
 					</div>
 				</div>
+				{controlsLocked && (
+					<div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200">
+						<Loader2 className="h-4 w-4 animate-spin" />
+						Searching quick match... join/create actions are temporarily locked.
+					</div>
+				)}
 
-				{/* Rooms List */}
-				<div className="lg:col-span-2">
-					<div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-xl">
-						<div className="flex items-center justify-between mb-4">
-							<h2 className="text-lg font-semibold flex items-center gap-2">
-								<Users className="h-5 w-5 text-cyan-400" />
-								Available Rooms
-							</h2>
+			{/* Browse Rooms */}
+			<div className={`space-y-4 pb-3 ${lockedClassName}`}>
+				<div className="flex items-center justify-between">
+					<div>
+						<h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+							<Globe className="h-5 w-5 text-cyan-400" />
+							Open Rooms
+						</h2>
+						<p className="text-sm text-white/50 mt-0.5">Join an existing game</p>
+					</div>
+					<button
+						onClick={actions.onRefresh}
+						disabled={loading || controlsLocked}
+						className="rounded-2xl border border-white/10 bg-white/5 p-2.5 hover:bg-white/15 transition"
+					>
+						<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+					</button>
+				</div>
+
+				{rooms.length === 0 ? (
+					<div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] py-12 text-center">
+						<p className="text-white/40 text-sm">No open rooms right now</p>
+						<p className="text-white/25 text-xs mt-1">Create one or use Quick Match</p>
+					</div>
+				) : (
+					<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+						{rooms.map((room: RoomInfo) => {
+							const isOwner = room.owner?.id.toString() === userId;
+							const isOpen = room.status === "OPEN";
+							return (
+								<div
+									key={room.id}
+									className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 hover:bg-white/[0.06] transition"
+								>
+									<div className="flex items-center justify-between mb-2">
+										<div className="flex items-center gap-2">
+											<Users className="h-4 w-4 text-white/40" />
+											<span className="font-medium text-sm">#{room.id}</span>
+										</div>
+										<span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+											isOpen
+												? "bg-emerald-500/10 text-emerald-300 border-emerald-400/20"
+												: "bg-red-500/10 text-red-300 border-red-400/20"
+										}`}>
+											<span className={`h-1.5 w-1.5 rounded-full ${isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
+											{room.status}
+										</span>
+									</div>
+									<div className="flex items-center justify-between gap-2">
+										<span className="text-xs text-white/40">
+											by {room.owner?.display_name}
+										</span>
+										<div className="flex items-center gap-2">
+											{isOwner && (
+												<button
+													onClick={() => actions.onDeleteRoom(room.id)}
+													className="rounded-xl border border-red-500/20 bg-red-500/5 p-2 text-red-400 hover:bg-red-500/10 transition"
+												>
+													<Trash2 className="h-3.5 w-3.5" />
+												</button>
+											)}
+											<button
+												onClick={() => actions.onJoinRoom(room.id)}
+												disabled={!isOpen || loading || controlsLocked}
+													className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5 ${
+													isOpen
+														? "bg-white text-zinc-950 hover:opacity-90 disabled:opacity-40"
+														: "bg-white/5 text-white/30 pointer-events-none"
+												}`}
+											>
+												<LogIn className="h-3.5 w-3.5" />
+												Join
+											</button>
+										</div>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
+
+			{rules && showRulesModal && (
+				<div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+					<div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-zinc-950 p-5 sm:p-6 max-h-[90vh] overflow-auto">
+						<div className="flex items-start justify-between gap-4 mb-4">
+							<div>
+								<h2 className="text-xl font-semibold">{rules.title}</h2>
+								<p className="text-sm text-white/50 mt-1">Visual guides and quick rules</p>
+							</div>
 							<button
-								onClick={loadRooms}
-								className="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/15 transition"
+								onClick={() => setShowRulesModal(false)}
+								className="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10 transition"
 							>
-								<RefreshCw className="h-4 w-4" />
+								<X className="h-4 w-4" />
 							</button>
 						</div>
 
-						<div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
-							{rooms.length === 0 ? (
-								<div className="text-center py-12 text-white/50">
-									<p>No rooms available</p>
+						<ol className="space-y-2 text-sm text-white/70 list-decimal list-inside">
+							{rules.rules.map((rule, i) => (
+								<li key={i}>{rule}</li>
+							))}
+						</ol>
+
+						<div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+							<h3 className="text-sm font-semibold text-white mb-3">Winning Example</h3>
+							{gameType === "tic-tac-toe" ? (
+								<div className="grid grid-cols-3 gap-2 max-w-[220px]">
+									{["X", "X", "X", "O", null, "O", null, null, null].map((cell, index) => (
+										<div key={index} className="aspect-square rounded-lg border border-white/15 bg-black/30 grid place-items-center text-lg font-bold">
+											{cell === "X" ? <span className="text-cyan-300">X</span> : cell === "O" ? <span className="text-fuchsia-300">O</span> : null}
+										</div>
+									))}
 								</div>
 							) : (
-								rooms.map((room) => {
-									const isOwner = room.owner?.id.toString() === userId;
-									const isOpen = room.status === "OPEN";
-									return (
-										<div
-											key={room.id}
-											className={`flex items-center justify-between p-4 rounded-2xl border transition group ${
-												isOpen
-													? "border-green-500/50 bg-gradient-to-r from-green-500/15 to-green-500/5 hover:from-green-500/25 hover:to-green-500/10"
-													: "border-white/10 bg-white/[0.02] hover:bg-white/[0.06]"
-											}`}
-										>
-											<div className="min-w-0 flex-1">
-												<div
-													className={`font-medium truncate ${isOpen ? "text-green-100" : "text-white"}`}
-												>
-													Room {room.id}
-												</div>
-												<div className="text-xs text-white/50 mt-1 flex gap-4">
-													<span>
-														Players: {room.playerCount}/{room.maxPlayers}
-													</span>
-													<span>Status: {room.status}</span>
-												</div>
+								<div className="grid grid-cols-7 gap-1 max-w-[320px] bg-blue-900/40 p-2 rounded-xl border border-blue-500/30">
+									{Array.from({ length: 42 }, (_, index) => {
+										const row = Math.floor(index / 7);
+										const col = index % 7;
+										const isWinningRow = row === 5 && col >= 1 && col <= 4;
+										const isYellow = row === 5 && (col === 0 || col === 5);
+										return (
+											<div key={index} className="aspect-square rounded-full bg-black/40 border border-white/10 grid place-items-center">
+												<div className={`h-[72%] w-[72%] rounded-full ${isWinningRow ? "bg-red-400" : isYellow ? "bg-amber-300" : "bg-transparent"}`} />
 											</div>
-
-											<div className="flex gap-2 ml-4">
-												{isOwner && (
-													<button
-														onClick={() => handleDeleteRoom(room)}
-														className="rounded-xl border border-red-500/30 bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20"
-													>
-														<Trash2 className="h-4 w-4" />
-													</button>
-												)}
-												<button
-													onClick={() => handleJoinRoom(room)}
-													className={`rounded-xl border px-4 py-2 text-sm font-medium transition flex items-center gap-2 ${
-														isOpen
-															? "border-green-400/50 bg-green-500/20 text-green-200 hover:bg-green-500/30"
-															: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-													}`}
-												>
-													<LogIn className="h-4 w-4" />
-													Join
-												</button>
-											</div>
-										</div>
-									);
-								})
+										);
+									})}
+								</div>
 							)}
+							<p className="text-xs text-white/50 mt-3">
+								{gameType === "tic-tac-toe"
+									? "Example: three X marks in a row wins."
+									: "Example: four red discs connected horizontally wins."}
+							</p>
 						</div>
 					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 }

@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/auth-session";
 import { getSession } from "@/lib/auth/auth-session";
 import { getRoomMeta } from "@/app/play/actions";
+import { isValidRoomId } from "@/lib/utils/roomId";
 import { MainLayout } from "@/components/layout/MainLayout";
 import RoomView from "./RoomView";
 
@@ -11,6 +12,10 @@ type PageProps = {
 
 export default async function RoomPage({ params }: PageProps) {
   const { roomId } = await params;
+
+  if (!isValidRoomId(roomId)) {
+    notFound();
+  }
 
   let userId: number;
   try {
@@ -26,8 +31,7 @@ export default async function RoomPage({ params }: PageProps) {
 
   const meta = await getRoomMeta(roomId);
   if (!meta) {
-    // Or redirect to lobby with error
-    redirect("/play/connect4");
+    notFound();
   }
 
   if (meta.game_type !== "connect4") {

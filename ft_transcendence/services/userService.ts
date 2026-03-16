@@ -28,7 +28,7 @@ export const userService = {
                     use2FA: true,
                 },
             }),
-            getGameHistory(userId, { limit: 5 }),
+            getGameHistory(userId, { limit: 50 }),
             getPlayerStats(userId),
             getXPInfo(userId),
             getUserAchievements(userId),

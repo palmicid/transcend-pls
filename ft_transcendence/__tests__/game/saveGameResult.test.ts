@@ -15,6 +15,15 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
+vi.mock('@/lib/game/xpService', () => ({
+  calculateXP: vi.fn().mockReturnValue(10),
+  awardXP: vi.fn(),
+}));
+
+vi.mock('@/lib/game/achievementService', () => ({
+  checkAndAwardAchievements: vi.fn(),
+}));
+
 describe('saveGameResult', () => {
   const mockDate = new Date('2024-01-01T12:00:00Z');
   const defaults = {

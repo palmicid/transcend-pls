@@ -12,8 +12,12 @@ const { mockPrisma, mockGetSession, mockRoomManager, mockBroadcaster, mockLoadAn
             update: vi.fn(),
             delete: vi.fn(),
         },
+        user: {
+            findUnique: vi.fn(),
+        },
         roomPlayer: {
             deleteMany: vi.fn(),
+            findUnique: vi.fn(),
         }
     },
     mockGetSession: vi.fn(),
@@ -22,6 +26,8 @@ const { mockPrisma, mockGetSession, mockRoomManager, mockBroadcaster, mockLoadAn
         getRoom: vi.fn(),
         destroyRoom: vi.fn(),
         removePlayer: vi.fn(),
+        createRoomRecord: vi.fn(),
+        persistStateToDb: vi.fn(),
     },
     mockBroadcaster: {
         broadcast: vi.fn(),
@@ -47,6 +53,7 @@ const mockRoomInstance = {
     getSnapshot: vi.fn(),
     start: vi.fn(),
     end: vi.fn(),
+    isTerminal: vi.fn(),
 };
 
 describe('Connect4 Server Actions', () => {
@@ -59,15 +66,14 @@ describe('Connect4 Server Actions', () => {
 
   describe('createConnect4Room', () => {
       it('should create a room and attach game', async () => {
-          mockPrisma.room.create.mockResolvedValue({ id: 'room-new', game_type: 'connect4' });
+          mockPrisma.user.findUnique.mockResolvedValue({ id: 123, displayName: "Test User" });
+          mockRoomManager.createRoomRecord.mockResolvedValue({ id: 'room-new', game_type: 'connect4' });
 
           const result = await createConnect4Room();
 
-          expect(mockPrisma.room.create).toHaveBeenCalledWith(expect.objectContaining({
-              data: expect.objectContaining({
-                  game_type: 'connect4',
-                  current_turn: 'Red'
-              })
+          expect(mockRoomManager.createRoomRecord).toHaveBeenCalledWith(expect.objectContaining({
+              gameType: 'connect4',
+              currentTurn: 'Red'
           }));
           expect(mockRoomManager.attachGame).toHaveBeenCalled();
           expect(result.ok).toBe(true);
@@ -87,19 +93,30 @@ describe('Connect4 Server Actions', () => {
           mockRoomInstance.getSnapshot.mockReturnValue({
               board: [], currentTurn: 'Red', winner: null, is_draw: false, players: {}
           });
-          // Mock findUnique for broadcast
+          // Mock findUnique for broadcast and move validation
+          const emptyBoard = Array(6).fill(null).map(() => Array(7).fill(null));
           mockPrisma.room.findUnique.mockResolvedValue({
               id: 'room-123',
               players: [],
-              board_state: [],
-              status: 'IN_GAME'
+              board_state: emptyBoard,
+              status: 'IN_GAME',
+              current_turn: 'Red',
+          });
+          mockPrisma.roomPlayer.findUnique.mockResolvedValue({
+              user_id: 123,
+              room_id: 'room-123',
+              role: 'Red',
+          });
+          mockPrisma.user.findUnique.mockResolvedValue({
+              id: 123,
+              displayName: 'Test User'
           });
 
           const result = await submitConnect4Move('room-123', '123', 3);
 
           expect(mockLoadAndValidateRoom).toHaveBeenCalledWith('room-123');
           expect(mockRoomInstance.submitAction).toHaveBeenCalledWith('123', { column: 3 });
-          expect(mockPrisma.room.update).toHaveBeenCalled(); // Sync
+          expect(mockRoomManager.persistStateToDb).toHaveBeenCalled(); // Sync
           expect(mockBroadcaster.broadcast).toHaveBeenCalled(); // Broadcast
           expect(result.ok).toBe(true);
       });
@@ -117,15 +134,28 @@ describe('Connect4 Server Actions', () => {
       it('should correctly handle incomplete board state (regression test)', async () => {
           mockRoomInstance.submitAction.mockReturnValue(true);
           // Board partially filled, no winner
+          const partialBoard = Array(6).fill(null).map(() => Array(7).fill(null));
+          partialBoard[5][0] = 'Red';
+          
           mockRoomInstance.getSnapshot.mockReturnValue({
-              board: [['Red', null], [null, null]], currentTurn: 'Yellow', winner: null, is_draw: false, players: {}
+              board: partialBoard, currentTurn: 'Yellow', winner: null, is_draw: false, players: {}
           });
           mockPrisma.room.findUnique.mockResolvedValue({
               id: 'room-123',
               players: [],
-              board_state: [['Red', null], [null, null]], // Not full
+              board_state: partialBoard, // Not full
               status: 'IN_GAME',
+              current_turn: 'Yellow',
               winner_role: null
+          });
+          mockPrisma.roomPlayer.findUnique.mockResolvedValue({
+              user_id: 123,
+              room_id: 'room-123',
+              role: 'Yellow',
+          });
+          mockPrisma.user.findUnique.mockResolvedValue({
+              id: 123,
+              displayName: 'Test User'
           });
 
           await submitConnect4Move('room-123', '123', 0);
