@@ -84,11 +84,11 @@ This project also emphasizes frontend quality and user experience. A custom-made
 
 - Set up the initial project infrastructure and development environment
 - Designed and implemented the Docker-based architecture for the project
-- Configured containerized services and orchestration using Docker and Make
 - Implemented HTTPS support for the application to ensure secure communication
 - Integrated an AI chat feature powered by a local Ollama model
 - Developed backend logic to communicate with the Ollama model and stream responses to the frontend
 - Ensured the system could run consistently in both development and production environments
+- Designed and implemented a centralized logging system using the ELK stack (Elasticsearch, Logstash, Kibana)
 
 ## Project Management
 
@@ -119,6 +119,18 @@ This project also emphasizes frontend quality and user experience. A custom-made
 ### AI
 - AI: Ollama
   - Ollama is a local model that we run on our machine.
+
+### DevOps / Infrastructure
+
+- **Docker & Docker Compose** for containerized deployment and reproducible environments
+- **Nginx** as an HTTPS reverse proxy for routing and secure external access
+- **ELK Stack**
+  - **Elasticsearch** for centralized log storage and indexing
+  - **Logstash** for log ingestion and processing
+  - **Kibana** for log visualization and monitoring dashboards
+- **GELF logging driver** for exporting container logs to Logstash
+
+
 - Any other significant technologies or libraries.
 - Justification for major technical choices.
 
@@ -203,6 +215,18 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Streaming responses from the model to the user interface
 - Error handling for model availability and request failures
 - Local AI inference without external API dependencies
+- Implemented by **scharuka**
+
+### Centralized Logging Infrastructure (ELK Stack)
+
+- Implemented centralized logging for all containers in the system
+- Docker containers export logs using the GELF logging driver
+- Logstash collects and processes logs before sending them to Elasticsearch
+- Elasticsearch stores and indexes logs for fast querying
+- Kibana dashboards allow real-time log exploration and debugging
+- Implemented a log retention policy using Elasticsearch Index Lifecycle Management (ILM)
+- Logs from services such as Next.js, Nginx, PostgreSQL, MinIO, and Ollama can be inspected through Kibana
+- Implemented by **scharuka**
 
 ## Module
 
@@ -225,8 +249,9 @@ This project also emphasizes frontend quality and user experience. A custom-made
 | Major | Gaming and user experience | Add another game with user history and matchmaking | 2 pts | kkaiyawo |
 | Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
 | Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
+| Major | DevOps | Infrastructure for log management using ELK | 2 pts | scharuka |
 
-Total points from these modules: **15 points**
+Total points from these modules: **17 points**
 
 ---
 
@@ -376,6 +401,30 @@ The system includes:
 - Streaming responses from the model to the user interface
 - Error handling for model availability and request failures
 - Local AI inference without external API dependencies
+
+**Contributor:** scharuka
+
+## 10. Infrastructure for log management using ELK
+
+**Type:** Major
+**Category:** DevOps
+**Points:** 2
+
+### Justification
+
+Centralized logging is essential for monitoring distributed containerized systems.
+Using the ELK stack allows logs from all application services to be collected, indexed, and visualized in a unified interface.
+
+### Implementation
+
+The logging infrastructure was implemented using **Elasticsearch, Logstash, and Kibana**.
+
+- Docker containers export logs using the **GELF logging driver**
+- **Logstash** receives and processes logs from containers
+- **Elasticsearch** stores and indexes logs for querying
+- **Kibana** provides dashboards for log visualization and filtering
+- **Index Lifecycle Management (ILM)** was configured to automatically delete logs older than the retention period
+- Kibana is exposed through the **Nginx reverse proxy** under `/kibana` for secure access
 
 **Contributor:** scharuka
 

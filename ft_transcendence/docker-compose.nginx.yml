@@ -16,6 +16,9 @@ services:
     depends_on:
       - web
       - minio
+    networks:
+      - elk
+      - default
 
     restart: unless-stopped
 
