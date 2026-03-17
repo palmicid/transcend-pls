@@ -87,6 +87,11 @@ logging:
 
 .PHONY: reset-kibana-pwd
 reset-kibana-pwd:
+	@echo "Waiting for Elasticsearch..."
+	@until docker exec elasticsearch curl -sk http://localhost:9200 >/dev/null; do \
+		sleep 2; \
+	done
+	@echo "Elasticsearch is ready!"
 	@echo "Resetting Kibana system password..."
 	$(eval NEW_PWD := $(shell docker exec elasticsearch bin/elasticsearch-reset-password -u kibana_system --silent --batch))
 	@if [ -z "$(NEW_PWD)" ]; then \
