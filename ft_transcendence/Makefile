@@ -88,43 +88,76 @@ logging:
 .PHONY: reset-kibana-pwd
 reset-kibana-pwd:
 	@echo "Waiting for Elasticsearch..."
-	@until docker exec elasticsearch curl -sk http://localhost:9200 >/dev/null; do \
+	@until docker exec elasticsearch curl -sk https://localhost:9200 >/dev/null; do \
 		sleep 2; \
-	done
-	@echo "Elasticsearch is ready!"
-	@echo "Resetting Kibana system password..."
-	$(eval NEW_PWD := $(shell docker exec elasticsearch bin/elasticsearch-reset-password -u kibana_system --silent --batch))
-	@if [ -z "$(NEW_PWD)" ]; then \
-		echo "Error: Failed to retrieve new password."; exit 1; \
+	done; \
+	echo "Elasticsearch is ready!"; \
+	echo "Resetting Kibana system password..."; \
+	NEW_PWD=$$(docker exec elasticsearch \
+		bin/elasticsearch-reset-password -u kibana_system --batch --silent \
+		| awk -F': ' '{print $$2}'); \
+	if [ -z "$$NEW_PWD" ]; then \
+		echo "❌ Error: Failed to retrieve new password."; exit 1; \
+	fi; \
+	echo "New password: $$NEW_PWD"; \
+	sed -i 's|^KIBANA_PASSWORD=.*|KIBANA_PASSWORD='$$NEW_PWD'|' .env; \
+	echo "✅ Success! KIBANA_PASSWORD updated in .env"
+.PHONY: create-network
+create-network:
+	@if docker network inspect elk >/dev/null 2>&1; then \
+		echo "Network 'elk' already exists"; \
+	else \
+		echo "Creating network 'elk'..."; \
+		docker network create elk; \
 	fi
-	@sed -i 's|^KIBANA_PASSWORD=.*|KIBANA_PASSWORD=$(NEW_PWD)|' .env
-	@echo "Success! KIBANA_PASSWORD updated in .env"
 
+.PHONY: generate-certs
+generate-certs:
+	@mkdir -p certs
+	@if [ ! -f certs/http.p12 ]; then \
+		echo "Generating Elasticsearch certs with SAN..."; \
+		docker run --rm -u 0 \
+			-v $(PWD)/certs:/certs \
+			docker.elastic.co/elasticsearch/elasticsearch:8.12.2 \
+			bin/elasticsearch-certutil cert --silent \
+			--self-signed \
+			--in /certs/instances.yml \
+			--out /certs/http.p12 \
+			--pass ""; \
+	else \
+		echo "Certificates already exist"; \
+	fi
+	@chmod 644 certs/http.p12
 # ============================================================================
 # Development Environment
 # ============================================================================
 .PHONY: dev
 dev:  ## Run development environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting development environment with Ollama...$(RESET)"
-	docker network create elk
+	make create-network
+	make generate-certs
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
-	docker network create elk
+	make create-network
+	make generate-certs
 	@echo "$(GREEN)🚀 Starting development environment with Ollama (detached)...$(RESET)"
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build -d
 
 .PHONY: dev-no-ollama
 dev-no-ollama: ## Run development environment without Ollama
 	@echo "$(GREEN)🚀 Starting development environment (without Ollama)...$(RESET)"
-	docker network create elk
+	make create-network
+	make generate-certs
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev up --build
 
 .PHONY: dev-no-ollama-detached
 dev-no-ollama-detached: ## Run development environment without Ollama in background
 	@echo "$(GREEN)🚀 Starting development environment without Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build -d
+	make create-network
+	make generate-certs
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev up --build -d
 
 # ============================================================================
 # Production Environment
@@ -132,7 +165,8 @@ dev-no-ollama-detached: ## Run development environment without Ollama in backgro
 .PHONY: prod
 prod:  ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
-	docker network create elk
+	make create-network
+	make generate-certs
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod --profile ollama up --build -d
 	@echo "Waiting for services to stabilize..."
 	@sleep 10
@@ -143,7 +177,8 @@ prod:  ## Run production environment with Ollama (default)
 .PHONY: prod-no-ollama
 prod-no-ollama: ## Run production environment without Ollama
 	@echo "$(GREEN)🚀 Starting production environment (without Ollama)...$(RESET)"
-	docker network create elk
+	make create-network
+	make generate-certs
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost$(RESET)"
@@ -169,7 +204,7 @@ build-no-ollama: ## Build Docker images without Ollama
 stop: ## Stop all running containers
 	@echo "$(YELLOW)⏹️  Stopping all containers...$(RESET)"
 ## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_PROD) -f $(COMPOSE_DEV) down --remove-orphans
-	docker compose down --remove-orphans
+	docker compose down --remove-orphans -v
 	docker network prune -f
 	@echo "$(GREEN)✅ All containers stopped$(RESET)"
 

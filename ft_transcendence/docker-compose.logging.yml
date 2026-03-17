@@ -8,10 +8,14 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.keystore.path=certs/http.p12
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - ES_JAVA_OPTS=-Xms4g -Xmx4g
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./certs:/usr/share/elasticsearch/config/certs 
+
     restart: unless-stopped
     networks:
       - elk
@@ -39,7 +43,7 @@ services:
       - "5601:5601"
     environment:
       - SERVER_PUBLICBASEURL=https://localhost:8443/kibana
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
       - SERVER_BASEPATH=/kibana
       - SERVER_REWRITEBASEPATH=true
       - ELASTICSEARCH_USERNAME=kibana_system
@@ -53,8 +57,10 @@ services:
       - elk
     restart: unless-stopped
 
+
 volumes:
   elasticsearch_data:
+
 
 networks:
   elk:
