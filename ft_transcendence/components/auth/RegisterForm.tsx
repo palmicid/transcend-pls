@@ -32,6 +32,14 @@ export function RegisterForm() {
         return;
       }
 
+      // Email validation: only English letters, numbers, and standard symbols
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        setModalMsg("Please enter a valid email address (English letters, numbers, and standard symbols only).");
+        setModalOpen(true);
+        return;
+      }
+
       // password match check
       if (password !== confirmPassword) {
         setModalMsg("Password and confirm password do not match.");
@@ -73,7 +81,9 @@ export function RegisterForm() {
         <input
           className="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-3 outline-none focus:border-white/20 focus:bg-black/30 transition text-white"
           placeholder="Email"
-          type="email"
+          type="text"
+          inputMode="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -103,6 +113,7 @@ export function RegisterForm() {
         </div>
 
         <button
+          type="button"
           disabled={submitting}
           onClick={onRegister}
           className="w-full rounded-2xl bg-white text-zinc-950 font-semibold py-3 disabled:opacity-60 hover:opacity-90 transition mt-2"
