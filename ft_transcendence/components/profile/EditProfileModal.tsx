@@ -23,7 +23,7 @@ export function EditProfileModal({
   onSuccess,
 }: Props) {
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
+  const email = user.email;
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -42,7 +42,6 @@ export function EditProfileModal({
     if (!open) return;
 
     setDisplayName(user.displayName);
-    setEmail(user.email);
     setPassword("");
     setConfirmPassword("");
     setChangePassword(false);
@@ -74,7 +73,6 @@ export function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           display_name: displayName,
-          email,
           ...(changePassword ? { password } : {}),
         }),
       });
@@ -120,9 +118,9 @@ export function EditProfileModal({
 
               <input
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="w-full rounded bg-zinc-800 p-2"
+                disabled
+                className="w-full rounded bg-zinc-800 p-2 opacity-60"
               />
 
               <button

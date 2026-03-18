@@ -75,12 +75,36 @@ help: ## Show this help message
 	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)"
 
 # ============================================================================
+# Logging Environment
+# ============================================================================
+
+.PHONY: logging
+logging:
+	docker compose -f docker-compose.logging.yml up -d
+
+.PHONY: reset-kibana-pwd
+reset-kibana-pwd:
+	@echo "Waiting for Elasticsearch..."
+	@until docker exec elasticsearch curl -sk http://localhost:9200 >/dev/null; do \
+		sleep 2; \
+	done
+	@echo "Elasticsearch is ready!"
+	@echo "Resetting Kibana system password..."
+	$(eval NEW_PWD := $(shell docker exec elasticsearch bin/elasticsearch-reset-password -u kibana_system --silent --batch))
+	@if [ -z "$(NEW_PWD)" ]; then \
+		echo "Error: Failed to retrieve new password."; exit 1; \
+	fi
+	@sed -i 's|^KIBANA_PASSWORD=.*|KIBANA_PASSWORD=$(NEW_PWD)|' .env
+	@echo "Success! KIBANA_PASSWORD updated in .env"
+
+# ============================================================================
 # Development Environment
 # ============================================================================
 .PHONY: dev
 dev: ## Run development environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting development environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
@@ -103,7 +127,10 @@ dev-no-ollama-detached: ## Run development environment without Ollama in backgro
 .PHONY: prod
 prod: ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile prod --profile ollama up --build -d
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod --profile ollama up --build -d
+	@echo "Waiting for services to stabilize..."
+	@sleep 10
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost:8443$(RESET)"
 	@echo "$(CYAN)   Ollama:  https://localhost:11434$(RESET)"
@@ -281,15 +308,20 @@ setup: install ## Initial project setup
 	@echo "$(GREEN)✅ Setup complete! Run 'make dev' to start development.$(RESET)"
 
 .PHONY: all
-all: dev  ## Build and run development environment
+all: dev-detached  ## Build and run development environment
+	@echo "Waiting for services to stabilize..."
+	@sleep 10
 	docker exec nextjs-app-dev npx prisma db push
 	docker exec nextjs-app-dev npx prisma generate
+	make reset-kibana-pwd
 	make stop
 	make prod
 
 .PHONY: all-no-ollama
 all-no-ollama:
 	make dev-no-ollama-detached
+	@echo "Waiting for services to stabilize..."
+	@sleep 10
 	docker exec nextjs-app-dev npx prisma db push
 	docker exec nextjs-app-dev npx prisma generate
 	make stop

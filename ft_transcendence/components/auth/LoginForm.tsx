@@ -16,8 +16,8 @@ export function LoginForm() {
     return "OAuth failed.";
   }, [oauthError]);
 
-  const [email, setEmail] = useState("mobile@example.com");
-  const [password, setPassword] = useState("mobile123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(!!oauthError);
