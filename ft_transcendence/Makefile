@@ -24,6 +24,8 @@ COMPOSE_DEV     := docker-compose.dev.yml
 COMPOSE_PROD    := docker-compose.prod.yml
 COMPOSE_OLLAMA  := docker-compose.ollama.yml
 COMPOSE_NGINX   := docker-compose.nginx.yml
+COMPOSE_LOGGING := docker-compose.logging.yml
+COMPOSE_LOGSETUP := docker-compose.logsetting.yml
 
 # Project name
 PROJECT_NAME := ft_transcendence
@@ -109,17 +111,20 @@ dev: ## Run development environment with Ollama (default)
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
 	@echo "$(GREEN)🚀 Starting development environment with Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build -d
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build -d
 
 .PHONY: dev-no-ollama
 dev-no-ollama: ## Run development environment without Ollama
 	@echo "$(GREEN)🚀 Starting development environment (without Ollama)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev up --build
 
 .PHONY: dev-no-ollama-detached
 dev-no-ollama-detached: ## Run development environment without Ollama in background
 	@echo "$(GREEN)🚀 Starting development environment without Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build -d
+	docker network create elk
+	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev up --build -d
 
 # ============================================================================
 # Production Environment

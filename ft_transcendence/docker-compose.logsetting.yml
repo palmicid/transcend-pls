@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+
+  web:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://localhost:12201"
+
+
+  db:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://localhost:12201"
+
+
+  nginx:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://localhost:12201"
+
+
+  minio:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://localhost:12201"
+
+
+  ollama:
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://localhost:12201"
