@@ -97,20 +97,23 @@ export async function checkAndAwardAchievements(
     if (alreadyUnlocked.has(achievement.id)) continue;
     if (!achievement.check(ctx)) continue;
 
-    // Insert unlock record (createMany with skipDuplicates for safety)
-    await prisma.userAchievement.create({
-      data: {
-        user_id: userId,
-        achievement_id: achievement.id,
-      },
-    });
-
     newlyUnlocked.push({
       id: achievement.id,
       name: achievement.name,
       description: achievement.description,
       icon: achievement.icon,
       category: achievement.category,
+    });
+  }
+
+  // 3. Batch-insert unlock records (skipDuplicates guards against concurrent calls)
+  if (newlyUnlocked.length > 0) {
+    await prisma.userAchievement.createMany({
+      data: newlyUnlocked.map((a) => ({
+        user_id: userId,
+        achievement_id: a.id,
+      })),
+      skipDuplicates: true,
     });
   }
 
