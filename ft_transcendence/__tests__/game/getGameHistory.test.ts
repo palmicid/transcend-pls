@@ -64,7 +64,7 @@ describe('getGameHistory', () => {
     (prisma.gameResult.findMany as any).mockResolvedValue([
       {
         id: 11,
-        game_type: 'connect4',
+        game_type: 'tic-tac-toe',
         room_id: 'room-11',
         player1_id: 1,
         player2_id: 2,
@@ -73,11 +73,11 @@ describe('getGameHistory', () => {
         duration_ms: 45000,
         started_at: new Date('2026-03-10T11:00:00Z'),
         ended_at: new Date('2026-03-10T11:00:45Z'),
-        final_board: [['Red']],
+        final_board: ['X', 'X', 'X', 'O', null, null, null, null, null],
         player1: { id: 1, display_name: 'Alice', avatar_url: null },
         player2: { id: 2, display_name: 'Bob', avatar_url: null },
-        player1_role: 'Red',
-        player2_role: 'Yellow',
+        player1_role: 'X',
+        player2_role: 'O',
         xp_awarded_p1: 20,
         xp_awarded_p2: 5,
       },
@@ -88,8 +88,8 @@ describe('getGameHistory', () => {
     expect(history[0]).toMatchObject({
       result: 'loss',
       opponent: { id: 1, displayName: 'Alice', avatarUrl: null },
-      finalBoard: [['Red']],
-      playerRole: 'Yellow',
+      finalBoard: ['X', 'X', 'X', 'O', null, null, null, null, null],
+      playerRole: 'O',
       xpEarned: 5,
     });
   });

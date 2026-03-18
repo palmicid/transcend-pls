@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { RoomInfo } from "@/types/game";
 import GameLobby from "@/components/game/lobby/GameLobby";
 import { listLobbyRooms, deleteLobbyRoom } from "@/app/play/actions";
-import { joinMatchmakingQueue, leaveMatchmakingQueue } from "@/app/play/matchmaking-actions";
 
 interface LobbyMetadata {
   name: string;
@@ -34,8 +33,6 @@ export default function GameLobbyContent({
   const router = useRouter();
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [queueLoading, setQueueLoading] = useState(false);
 
   const loadRooms = async () => {
     setLoading(true);
@@ -51,41 +48,8 @@ export default function GameLobbyContent({
 
   useEffect(() => {
     loadRooms();
-
-    // Safety cleanup for matchmaking on unmount
-    return () => {
-      if (isSearching) {
-        leaveMatchmakingQueue(gameId).catch(console.error);
-      }
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, isSearching]);
-
-  const handleJoinQueue = async () => {
-    if (queueLoading) return;
-    setQueueLoading(true);
-    try {
-      setIsSearching(true);
-      const { ok, error } = await joinMatchmakingQueue(gameId);
-      if (!ok) {
-        alert(error || "Failed to join queue");
-        setIsSearching(false);
-      }
-    } finally {
-      setQueueLoading(false);
-    }
-  };
-
-  const handleLeaveQueue = async () => {
-    if (queueLoading) return;
-    setQueueLoading(true);
-    try {
-      await leaveMatchmakingQueue(gameId);
-    } finally {
-      setIsSearching(false);
-      setQueueLoading(false);
-    }
-  };
+  }, [gameId]);
 
   const handleJoinRoom = (roomId: string) => {
     router.push(`/play/${metadata.urlSlug}/${roomId}`);
@@ -122,7 +86,6 @@ export default function GameLobbyContent({
   const handlePlayBot = async (difficulty: string) => {
     setLoading(true);
     try {
-      if (isSearching) await handleLeaveQueue();
       await onPlayBot(difficulty);
     } finally {
       setLoading(false);
@@ -134,11 +97,8 @@ export default function GameLobbyContent({
       gameType={gameId}
       userId={userId}
       rooms={rooms}
-      loading={loading || queueLoading}
+      loading={loading}
       actions={{
-        onJoinQueue: handleJoinQueue,
-        onLeaveQueue: handleLeaveQueue,
-        isSearching,
         onRefresh: loadRooms,
         onJoinRoom: handleJoinRoom,
         onCreateRoom: handleCreateRoom,

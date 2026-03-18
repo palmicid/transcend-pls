@@ -81,9 +81,6 @@ export interface RoomSnapshot<TBoard = unknown> {
 /** Tic-Tac-Toe specific board */
 export type TicTacToeBoard = (string | null)[];
 
-/** Connect4 specific board */
-export type Connect4Board = (string | null)[][];
-
 // =============================================================================
 // ACTION PAYLOADS
 // =============================================================================
@@ -92,8 +89,4 @@ export interface TicTacToeAction {
   cell: number;
 }
 
-export interface Connect4Action {
-  column: number;
-}
-
-export type GameAction = TicTacToeAction | Connect4Action;
+export type GameAction = TicTacToeAction;

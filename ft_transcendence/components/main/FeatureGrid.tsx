@@ -48,7 +48,7 @@ export function FeatureGrid() {
       {/* Games */}
       <FeatureCard
         title="Games"
-        desc="Play Tic-Tac-Toe, Connect 4, and more — with friends or against bots."
+        desc="Play Tic-Tac-Toe and more — with friends or against bots."
         href="/play"
         badge="Play"
 		color="cyan"

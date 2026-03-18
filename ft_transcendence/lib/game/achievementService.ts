@@ -13,7 +13,6 @@ export interface AchievementCheck extends AchievementDef {
 export interface CheckContext {
   stats: { wins: number; losses: number; draws: number; total: number };
   tttStats: { wins: number; losses: number; draws: number; total: number };
-  c4Stats: { wins: number; losses: number; draws: number; total: number };
   level: number;
 }
 
@@ -51,28 +50,12 @@ export const ACHIEVEMENTS: AchievementCheck[] = [
     check: (ctx) => ctx.tttStats.total >= 5,
   },
   {
-    id: "c4-fan",
-    name: "Connect 4 Fan",
-    description: "Play 5 games of Connect 4",
-    icon: "Columns",
-    category: "games",
-    check: (ctx) => ctx.c4Stats.total >= 5,
-  },
-  {
     id: "ttt-master",
     name: "Tic-Tac-Toe Master",
     description: "Win 10 games of Tic-Tac-Toe",
     icon: "Crown",
     category: "wins",
     check: (ctx) => ctx.tttStats.wins >= 10,
-  },
-  {
-    id: "c4-master",
-    name: "Connect 4 Master",
-    description: "Win 10 games of Connect 4",
-    icon: "Crown",
-    category: "wins",
-    check: (ctx) => ctx.c4Stats.wins >= 10,
   },
 ];
 
@@ -89,10 +72,9 @@ export async function checkAndAwardAchievements(
   userId: number
 ): Promise<AchievementDef[]> {
   // 1. Gather context (parallel)
-  const [stats, tttStats, c4Stats, xpInfo, existingUnlocks] = await Promise.all([
+  const [stats, tttStats, xpInfo, existingUnlocks] = await Promise.all([
     getPlayerStats(userId),
     getPlayerStats(userId, "tic-tac-toe"),
-    getPlayerStats(userId, "connect-4"),
     getXPInfo(userId),
     prisma.userAchievement.findMany({
       where: { user_id: userId },
@@ -105,7 +87,6 @@ export async function checkAndAwardAchievements(
   const ctx: CheckContext = {
     stats,
     tttStats,
-    c4Stats,
     level: xpInfo.level,
   };
 

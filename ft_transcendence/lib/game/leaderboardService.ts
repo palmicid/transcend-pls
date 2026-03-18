@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import type { LeaderboardEntry } from "@/types/progression";
 
-export type LeaderboardSortBy = "xp" | "ttt" | "c4";
+export type LeaderboardSortBy = "xp" | "ttt";
 
 async function buildPerGameLeaderboard(gameType: "tic-tac-toe" | "connect4"): Promise<LeaderboardEntry[]> {
   const [allUsers, player1Counts, player2Counts, winCounts] = await Promise.all([

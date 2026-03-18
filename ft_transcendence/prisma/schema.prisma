@@ -46,7 +46,6 @@ model User {
   // Progression
   xp            PlayerXP?
   achievements  UserAchievement[]
-  matchmakingEntries MatchmakingQueue[]
 }
 
 // Friendships Model
@@ -119,7 +118,7 @@ model RoomPlayer {
 model GameResult {
   id Int @id @default(autoincrement())
 
-  game_type String // "tic-tac-toe", "connect4"
+  game_type String // "tic-tac-toe"
   room_id   String? // Optional link to source Room
   final_board Json?
 
@@ -174,17 +173,4 @@ model UserAchievement {
   @@index([user_id])
 }
 
-model MatchmakingQueue {
-  id              Int       @id @default(autoincrement())
-  user_id         Int
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  game_type       String
-  status          String    @default("WAITING") // WAITING, MATCHED, CANCELLED, EXPIRED
-  matched_room_id String?   // Room ID when match is found
-  joined_at       DateTime  @default(now())
-  matched_at      DateTime?
 
-  @@unique([user_id, game_type, status]) // One active queue per user per game
-  @@index([game_type, status])
-  @@index([user_id])
-}

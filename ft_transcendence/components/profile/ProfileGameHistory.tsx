@@ -23,21 +23,15 @@ export default function ProfileGameHistory({
   unlockedAchievements,
   allAchievements,
 }: ProfileGameHistoryProps) {
-  const [activeTab, setActiveTab] = useState<"tic-tac-toe" | "connect4">("tic-tac-toe");
   const [page, setPage] = useState(1);
   const itemsPerPage = 3;
 
-  // Filter games by tab
-  const filteredGames = games.filter((g) => g.gameType === activeTab);
+  // Filter games (only Tic-Tac-Toe)
+  const filteredGames = games.filter((g) => g.gameType === "tic-tac-toe");
 
   // Pagination
   const totalPages = Math.ceil(filteredGames.length / itemsPerPage);
   const currentGames = filteredGames.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-
-  const handleTabChange = (tab: "tic-tac-toe" | "connect4") => {
-    setActiveTab(tab);
-    setPage(1); // Reset to page 1 on tab change
-  };
 
   const getResultColor = (result: string) => {
     switch (result) {
@@ -56,19 +50,7 @@ export default function ProfileGameHistory({
     });
   };
 
-  const getConnect4Board = (board: unknown): Array<Array<"Red" | "Yellow" | null>> | null => {
-    if (!Array.isArray(board) || board.length !== 6) return null;
-    const rows = board.map((row) => {
-      if (!Array.isArray(row) || row.length !== 7) return null;
-      return row.map((cell) => {
-        if (cell === "Red" || cell === "Yellow") return cell;
-        return null;
-      });
-    });
-    return rows.every((row) => row !== null) ? (rows as Array<Array<"Red" | "Yellow" | null>>) : null;
-  };
-
-  const gameDef = GameRegistry.get(activeTab);
+  const gameDef = GameRegistry.get("tic-tac-toe");
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -77,35 +59,10 @@ export default function ProfileGameHistory({
 
       {/* Game History Section */}
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] overflow-hidden">
-        {/* Header & Tabs */}
-        <div className="border-b border-white/10 bg-white/5 p-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Gamepad2 className="h-5 w-5 text-cyan-400" />
-            <h2 className="text-lg font-semibold tracking-tight text-white">Match History</h2>
-          </div>
-
-          <div className="flex p-1 bg-black/20 rounded-xl border border-white/5 overflow-x-auto hide-scrollbar">
-            <button
-              onClick={() => handleTabChange("tic-tac-toe")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                activeTab === "tic-tac-toe"
-                  ? "bg-white/10 text-white shadow-sm"
-                  : "text-white/50 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              Tic-Tac-Toe
-            </button>
-            <button
-              onClick={() => handleTabChange("connect4")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                activeTab === "connect4"
-                  ? "bg-white/10 text-white shadow-sm"
-                  : "text-white/50 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              Connect 4
-            </button>
-          </div>
+        {/* Header */}
+        <div className="border-b border-white/10 bg-white/5 p-4 sm:px-6 sm:py-5 flex items-center gap-2">
+          <Gamepad2 className="h-5 w-5 text-cyan-400" />
+          <h2 className="text-lg font-semibold tracking-tight text-white">Match History</h2>
         </div>
 
         {/* XP Tooltip Info */}
@@ -114,7 +71,6 @@ export default function ProfileGameHistory({
           <span>
             <strong className="text-white/80">XP Rewards:</strong>{" "}
             Win {"+"}{Math.floor((gameDef?.xpReward.base ?? 0) * (gameDef?.xpReward.winMultiplier ?? 0))} · Draw {"+"}{Math.floor((gameDef?.xpReward.base ?? 0) * (gameDef?.xpReward.drawMultiplier ?? 0))} · Loss {"+"}{Math.floor((gameDef?.xpReward.base ?? 0) * (gameDef?.xpReward.lossMultiplier ?? 0))}
-            {activeTab === "connect4" && ""}
             {" | Bot games award 1 XP"}
           </span>
         </div>
@@ -124,7 +80,7 @@ export default function ProfileGameHistory({
           {currentGames.length === 0 ? (
             <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
               <CalendarIcon className="h-8 w-8 text-white/20 mx-auto mb-3" />
-              <p className="text-white/40 text-sm">No {activeTab} matches played yet.</p>
+              <p className="text-white/40 text-sm">No Tic-Tac-Toe matches played yet.</p>
               <p className="text-white/25 text-xs mt-1">Visit the Game Lobby to start playing!</p>
             </div>
           ) : (
@@ -136,23 +92,13 @@ export default function ProfileGameHistory({
                 {/* Board Preview */}
                 <div className="shrink-0 flex justify-center sm:block">
                   <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner border border-white/10 bg-black/40 p-1.5">
-                    {game.gameType === "tic-tac-toe" && getTicTacToeBoard(game.finalBoard) ? (
+                    {getTicTacToeBoard(game.finalBoard) ? (
                       <div className="grid grid-cols-3 gap-1 h-full w-full">
                         {getTicTacToeBoard(game.finalBoard)!.map((cell, index) => (
                           <div key={index} className="rounded-[4px] border border-white/10 bg-white/[0.03] grid place-items-center text-[10px] font-bold">
                             {cell === "X" ? <span className="text-cyan-300">X</span> : cell === "O" ? <span className="text-fuchsia-300">O</span> : null}
                           </div>
                         ))}
-                      </div>
-                    ) : game.gameType === "connect4" && getConnect4Board(game.finalBoard) ? (
-                      <div className="grid grid-cols-7 gap-[2px] h-full w-full rounded-md bg-blue-900/35 p-[3px] border border-blue-500/30">
-                        {getConnect4Board(game.finalBoard)!.flatMap((row, rowIndex) =>
-                          row.map((cell, colIndex) => (
-                            <div key={`${rowIndex}-${colIndex}`} className="rounded-full bg-black/40 border border-white/10 grid place-items-center">
-                              <div className={`h-[70%] w-[70%] rounded-full ${cell === "Red" ? "bg-red-400" : cell === "Yellow" ? "bg-amber-300" : "bg-transparent"}`} />
-                            </div>
-                          ))
-                        )}
                       </div>
                     ) : (
                       <div className="w-full h-full rounded-lg border border-dashed border-white/15 grid place-items-center text-[10px] text-white/40">

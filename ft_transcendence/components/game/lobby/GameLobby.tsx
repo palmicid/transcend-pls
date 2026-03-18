@@ -6,9 +6,7 @@ import { ArrowLeft, Plus, RefreshCw, Trash2, Users, LogIn, Globe, HelpCircle, Lo
 import Link from "next/link";
 import { generateRoomId } from "@/lib/utils/roomId";
 
-import useMatchmakingSSE from "@/hooks/useMatchmakingSSE";
 import PlayVsBotCard from "./PlayVsBotCard";
-import MatchmakingPanel from "./MatchmakingPanel";
 
 interface GameLobbyProps {
 	gameType: string;
@@ -16,9 +14,6 @@ interface GameLobbyProps {
 	rooms: RoomInfo[];
 	loading: boolean;
 	actions: {
-		onJoinQueue: () => Promise<void>;
-		onLeaveQueue: () => Promise<void>;
-		isSearching: boolean;
 		onRefresh: () => Promise<void>;
 		onJoinRoom: (roomId: string) => void;
 		onCreateRoom: (roomId: string) => Promise<void>;
@@ -41,25 +36,13 @@ const GAME_RULES: Record<string, { title: string; rules: string[] }> = {
 			"If all 9 squares are filled without a winner, it's a draw.",
 		],
 	},
-	connect4: {
-		title: "How to Play Connect 4",
-		rules: [
-			"Players take turns dropping colored discs into a 7×6 grid.",
-			"Discs fall to the lowest available slot in the chosen column.",
-			"The first player to connect 4 discs in a row (horizontal, vertical, or diagonal) wins.",
-			"If the board fills up with no winner, it's a draw.",
-		],
-	},
 };
 
 export default function GameLobby({ gameType, userId, rooms, loading, actions, metadata }: GameLobbyProps) {
-	const queueState = useMatchmakingSSE(gameType, actions.isSearching);
 	const [localLoading, setLocalLoading] = useState(false);
 	const [showRulesModal, setShowRulesModal] = useState(false);
 
 	const rules = GAME_RULES[gameType];
-	const controlsLocked = actions.isSearching;
-	const lockedClassName = controlsLocked ? "opacity-60 blur-[1px] pointer-events-none select-none" : "";
 
 	const handleCreateRoom = async () => {
 		setLocalLoading(true);
@@ -107,32 +90,24 @@ export default function GameLobby({ gameType, userId, rooms, loading, actions, m
 				</button>
 			</div>
 
-			{/* CTA Row: Quick Match | Play vs Bot | Create Private Room */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-					<MatchmakingPanel
-						isSearching={actions.isSearching}
-						queueState={queueState}
-						onJoinQueue={actions.onJoinQueue}
-						onLeaveQueue={actions.onLeaveQueue}
-						loading={loading}
-					/>
-
-					<div className={lockedClassName}>
+			{/* CTA Row: Play vs Bot | Create Private Room */}
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+					<div>
 						<PlayVsBotCard
 							onPlayBot={actions.onPlayBot}
 							loading={loading}
-							disabled={controlsLocked}
+							disabled={false}
 						/>
 					</div>
 
-					<div className={`rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 h-full ${lockedClassName}`}>
+					<div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 h-full">
 						<h2 className="text-lg font-semibold tracking-tight mb-1">Create Private Room</h2>
 						<p className="text-sm text-white/50 mb-4">
 							Generate a room code and invite a friend to join.
 						</p>
 						<button
 							onClick={handleCreateRoom}
-							disabled={loading || localLoading || controlsLocked}
+							disabled={loading || localLoading}
 							className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 font-semibold text-zinc-950 hover:opacity-90 transition disabled:opacity-50"
 						>
 							<Plus className="h-4 w-4" />
@@ -140,15 +115,9 @@ export default function GameLobby({ gameType, userId, rooms, loading, actions, m
 						</button>
 					</div>
 				</div>
-				{controlsLocked && (
-					<div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200">
-						<Loader2 className="h-4 w-4 animate-spin" />
-						Searching quick match... join/create actions are temporarily locked.
-					</div>
-				)}
 
 			{/* Browse Rooms */}
-			<div className={`space-y-4 pb-3 ${lockedClassName}`}>
+			<div className="space-y-4 pb-3">
 				<div className="flex items-center justify-between">
 					<div>
 						<h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
@@ -159,7 +128,7 @@ export default function GameLobby({ gameType, userId, rooms, loading, actions, m
 					</div>
 					<button
 						onClick={actions.onRefresh}
-						disabled={loading || controlsLocked}
+						disabled={loading}
 						className="rounded-2xl border border-white/10 bg-white/5 p-2.5 hover:bg-white/15 transition"
 					>
 						<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -169,7 +138,7 @@ export default function GameLobby({ gameType, userId, rooms, loading, actions, m
 				{rooms.length === 0 ? (
 					<div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] py-12 text-center">
 						<p className="text-white/40 text-sm">No open rooms right now</p>
-						<p className="text-white/25 text-xs mt-1">Create one or use Quick Match</p>
+						<p className="text-white/25 text-xs mt-1">Create one or invite a friend to join</p>
 					</div>
 				) : (
 					<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
@@ -210,7 +179,7 @@ export default function GameLobby({ gameType, userId, rooms, loading, actions, m
 											)}
 											<button
 												onClick={() => actions.onJoinRoom(room.id)}
-												disabled={!isOpen || loading || controlsLocked}
+												disabled={!isOpen || loading}
 													className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5 ${
 													isOpen
 														? "bg-white text-zinc-950 hover:opacity-90 disabled:opacity-40"
@@ -253,33 +222,15 @@ export default function GameLobby({ gameType, userId, rooms, loading, actions, m
 
 						<div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
 							<h3 className="text-sm font-semibold text-white mb-3">Winning Example</h3>
-							{gameType === "tic-tac-toe" ? (
-								<div className="grid grid-cols-3 gap-2 max-w-[220px]">
-									{["X", "X", "X", "O", null, "O", null, null, null].map((cell, index) => (
-										<div key={index} className="aspect-square rounded-lg border border-white/15 bg-black/30 grid place-items-center text-lg font-bold">
-											{cell === "X" ? <span className="text-cyan-300">X</span> : cell === "O" ? <span className="text-fuchsia-300">O</span> : null}
-										</div>
-									))}
-								</div>
-							) : (
-								<div className="grid grid-cols-7 gap-1 max-w-[320px] bg-blue-900/40 p-2 rounded-xl border border-blue-500/30">
-									{Array.from({ length: 42 }, (_, index) => {
-										const row = Math.floor(index / 7);
-										const col = index % 7;
-										const isWinningRow = row === 5 && col >= 1 && col <= 4;
-										const isYellow = row === 5 && (col === 0 || col === 5);
-										return (
-											<div key={index} className="aspect-square rounded-full bg-black/40 border border-white/10 grid place-items-center">
-												<div className={`h-[72%] w-[72%] rounded-full ${isWinningRow ? "bg-red-400" : isYellow ? "bg-amber-300" : "bg-transparent"}`} />
-											</div>
-										);
-									})}
-								</div>
-							)}
+							<div className="grid grid-cols-3 gap-2 max-w-[220px]">
+								{["X", "X", "X", "O", null, "O", null, null, null].map((cell, index) => (
+									<div key={index} className="aspect-square rounded-lg border border-white/15 bg-black/30 grid place-items-center text-lg font-bold">
+										{cell === "X" ? <span className="text-cyan-300">X</span> : cell === "O" ? <span className="text-fuchsia-300">O</span> : null}
+									</div>
+								))}
+							</div>
 							<p className="text-xs text-white/50 mt-3">
-								{gameType === "tic-tac-toe"
-									? "Example: three X marks in a row wins."
-									: "Example: four red discs connected horizontally wins."}
+								Example: three X marks in a row wins.
 							</p>
 						</div>
 					</div>
