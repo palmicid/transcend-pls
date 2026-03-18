@@ -8,9 +8,9 @@
 import prisma from "@/lib/prisma";
 import { calculateXP, awardXP } from "@/lib/game/xpService";
 import { checkAndAwardAchievements } from "@/lib/game/achievementService";
+import bcrypt from "bcryptjs";
 
 const BOT_USER_EMAIL = "bot@transcendence.local";
-const BOT_USER_PASSWORD = "__BOT_ACCOUNT_DISABLED__";
 const BOT_USER_DISPLAY_NAME = "AI Bot";
 
 interface SaveGameResultParams {
@@ -77,14 +77,13 @@ export async function saveGameResult(params: SaveGameResultParams) {
         where: { email: BOT_USER_EMAIL },
         create: {
           email: BOT_USER_EMAIL,
-          password: BOT_USER_PASSWORD,
+          password: await bcrypt.hash(crypto.randomUUID(), 12),
           display_name: BOT_USER_DISPLAY_NAME,
-          is_verified: true,
+          is_verified: false,
+          is_bot: true,
         },
         update: {
           display_name: BOT_USER_DISPLAY_NAME,
-          password: BOT_USER_PASSWORD,
-          is_verified: true,
         },
         select: { id: true },
       });
