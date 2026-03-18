@@ -14,11 +14,22 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(Number(searchParams.get("limit")) || 20, 100);
-  const offset = Number(searchParams.get("offset")) || 0;
+  const limitParam = searchParams.get("limit");
+  let limit = Number.parseInt(limitParam ?? "", 10);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    limit = 20;
+  }
+  limit = Math.min(limit, 100);
+
+  const offsetParam = searchParams.get("offset");
+  let offset = Number.parseInt(offsetParam ?? "", 10);
+  if (!Number.isFinite(offset) || offset < 0) {
+    offset = 0;
+  }
+
   const sortByParam = searchParams.get("sortBy");
   const sortBy: LeaderboardSortBy =
-    sortByParam === "ttt" || sortByParam === "c4" ? sortByParam : "xp";
+    sortByParam === "ttt" || sortByParam === "xp" ? sortByParam : "xp";
 
   const [entries, total, myRank] = await Promise.all([
     getLeaderboard({ limit, offset, sortBy }),
