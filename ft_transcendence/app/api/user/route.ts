@@ -18,40 +18,31 @@ export async function GET() {
 }
 
 // Create user
-// export async function POST(req: Request) {
-//   try {
-//     const body = await req.json()
+export async function POST(req: Request) {
+  try {
+    const body = await req.json()
 
-//     //hash password
-//     const hashedPassword = await bcrypt.hash(body.password, 12)
+    //hash password
+    const hashedPassword = await bcrypt.hash(body.password, 12)
 
-//     const user = await prisma.user.create({
-//       data: {
-//         email: body.email,
-//         display_name: body.display_name,
-//         password: hashedPassword,
-//         // password: bcrypt.hash(body.password, process.env())
-//       },
-//       select: {
-//         id: true,
-//         email: true,
-//         display_name: true,
-//         avatar_url: true,
-//         online_status: true,
-//         created_at: true,
-//         is_verified: true,
-//         use2FA: true,
-//       }
-//     })
-//     return NextResponse.json(user, { status: 201 })
-//   } catch (err) {
-//     if (err instanceof PrismaClientKnownRequestError){
-//       if (err.code == 'P2002')
-//         return NextResponse.json({ error: 'Email already exists.' }, { status: 409 })
-//     }
-//     return NextResponse.json(
-//       { error: "Failed to create user" },
-//       { status: 500 }
-//     )
-//   }
-// }
+    const user = await prisma.user.create({
+      data: {
+        email: body.email,
+        display_name: body.display_name,
+        password: hashedPassword,
+        // password: bcrypt.hash(body.password, process.env())
+      },
+    })
+
+    return NextResponse.json(user, { status: 201 })
+  } catch (err) {
+    if (err instanceof PrismaClientKnownRequestError){
+      if (err.code == 'P2002')
+        return NextResponse.json({ error: 'Email already exists.' }, { status: 409 })
+    }
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    )
+  }
+}

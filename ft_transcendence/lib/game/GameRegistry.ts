@@ -9,7 +9,6 @@
 
 import { Game, GameConfig, GameState, PlayerSlot } from "@/lib/game";
 import TicTacToeGame from "@/lib/game/tic-tac-toe/TicTacToeGame";
-import Connect4Game from "@/lib/game/connect4/Connect4Game";
 
 // =============================================================================
 // TYPES
@@ -234,80 +233,4 @@ GameRegistry.register({
   ],
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONNECT 4
-// ─────────────────────────────────────────────────────────────────────────────
 
-GameRegistry.register({
-  id: "connect4",
-  name: "Connect 4",
-  description: "Drop discs to connect 4 in any direction!",
-  urlSlug: "connect4",
-
-  minPlayers: 2,
-  maxPlayers: 2,
-  roles: ["Red", "Yellow"] as const,
-  firstTurn: "Red",
-  supportsBots: true, // Connect4 supports bots
-
-  xpReward: { base: 75, winMultiplier: 2, drawMultiplier: 1, lossMultiplier: 0.5 },
-
-  boardInfo: { type: "grid", rows: 6, cols: 7 },
-  createEmptyBoard: () => Array(6).fill(null).map(() => Array(7).fill(null)),
-  parseBoard: (raw) =>
-    (raw as (string | null)[][]) || Array(6).fill(null).map(() => Array(7).fill(null)),
-
-  checkWin: (board) => {
-    const b = board as (string | null)[][];
-    const ROWS = 6, COLS = 7, WIN = 4;
-
-    const check = (r: number, c: number, dr: number, dc: number): string | null => {
-      const piece = b[r][c];
-      if (!piece) return null;
-      for (let i = 1; i < WIN; i++) {
-        const nr = r + dr * i, nc = c + dc * i;
-        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return null;
-        if (b[nr][nc] !== piece) return null;
-      }
-      return piece;
-    };
-
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const winner =
-          check(r, c, 0, 1) ||   // horizontal
-          check(r, c, 1, 0) ||   // vertical
-          check(r, c, 1, 1) ||   // diagonal down-right
-          check(r, c, 1, -1);    // diagonal down-left
-        if (winner) return winner;
-      }
-    }
-    return null;
-  },
-
-  checkDraw: (board, winner) => {
-    if (winner) return false;
-    return (board as (string | null)[][]).every(row => row.every(c => c !== null));
-  },
-
-  validateAction: (board, action, playerRole, currentTurn) => {
-    if (playerRole !== currentTurn) {
-      return { valid: false, error: "Not your turn" };
-    }
-    const { column } = action as { column: number };
-    if (column < 0 || column > 6) {
-      return { valid: false, error: "Invalid column" };
-    }
-    const b = board as (string | null)[][];
-    if (b[0][column] !== null) {
-      return { valid: false, error: "Column full" };
-    }
-    return { valid: true };
-  },
-
-  createGame: () => new Connect4Game(),
-
-  possibleActions: [
-    { type: "move", description: "Drop disc in column", params: { column: "number" } },
-  ],
-});

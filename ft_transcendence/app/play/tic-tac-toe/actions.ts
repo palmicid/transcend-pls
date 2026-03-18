@@ -21,6 +21,7 @@ import {
 	broadcastRoomSnapshot,
 } from "@/lib/game/gameActions";
 import type { BotDifficulty } from "@/lib/bot/constants";
+import { generateRoomId } from "@/lib/utils/roomId";
 
 // =============================================================================
 // LOBBY ACTIONS
@@ -38,8 +39,7 @@ export async function createTicTacToeRoom(roomId?: string) {
 	}
 
 	try {
-		const generatedRoomId =
-			roomId || `room-${Math.random().toString(36).substring(2, 9)}`;
+		const generatedRoomId = roomId || generateRoomId();
 
 		const room = await roomManager.createRoomRecord({
 			id: generatedRoomId,

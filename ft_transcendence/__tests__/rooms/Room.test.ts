@@ -153,13 +153,13 @@ describe("Room", () => {
       expect(result).toBe(false);
     });
 
-    it("should broadcast after action", () => {
+    it("should NOT broadcast after action (responsibility of caller)", () => {
       vi.mocked(broadcaster.broadcast).mockClear();
       room.submitAction("player-1", { cell: 0 });
-      expect(broadcaster.broadcast).toHaveBeenCalled();
+      expect(broadcaster.broadcast).not.toHaveBeenCalled();
     });
 
-    it("should auto-end on win", () => {
+    it("should indicate terminal state on win via isTerminal()", () => {
       // X wins with top row
       room.submitAction("player-1", { cell: 0 });
       room.submitAction("player-2", { cell: 3 });
@@ -167,7 +167,9 @@ describe("Room", () => {
       room.submitAction("player-2", { cell: 4 });
       room.submitAction("player-1", { cell: 2 }); // X wins
 
-      expect(room.status).toBe(State.ENDED);
+      expect(room.isTerminal()).toBe(true);
+      // Room status remains IN_GAME until caller explicitly ends it
+      expect(room.status).toBe(State.IN_GAME);
     });
   });
 

@@ -12,6 +12,7 @@ export interface AchievementCheck extends AchievementDef {
 
 export interface CheckContext {
   stats: { wins: number; losses: number; draws: number; total: number };
+  tttStats: { wins: number; losses: number; draws: number; total: number };
   level: number;
 }
 
@@ -40,6 +41,22 @@ export const ACHIEVEMENTS: AchievementCheck[] = [
     category: "special",
     check: (ctx) => ctx.level >= 3,
   },
+  {
+    id: "ttt-fan",
+    name: "Tic-Tac-Toe Fan",
+    description: "Play 5 games of Tic-Tac-Toe",
+    icon: "Grid3X3",
+    category: "games",
+    check: (ctx) => ctx.tttStats.total >= 5,
+  },
+  {
+    id: "ttt-master",
+    name: "Tic-Tac-Toe Master",
+    description: "Win 10 games of Tic-Tac-Toe",
+    icon: "Crown",
+    category: "wins",
+    check: (ctx) => ctx.tttStats.wins >= 10,
+  },
 ];
 
 // ─── Main Evaluation ────────────────────────────────────────────────────────
@@ -55,8 +72,9 @@ export async function checkAndAwardAchievements(
   userId: number
 ): Promise<AchievementDef[]> {
   // 1. Gather context (parallel)
-  const [stats, xpInfo, existingUnlocks] = await Promise.all([
+  const [stats, tttStats, xpInfo, existingUnlocks] = await Promise.all([
     getPlayerStats(userId),
+    getPlayerStats(userId, "tic-tac-toe"),
     getXPInfo(userId),
     prisma.userAchievement.findMany({
       where: { user_id: userId },
@@ -68,22 +86,16 @@ export async function checkAndAwardAchievements(
 
   const ctx: CheckContext = {
     stats,
+    tttStats,
     level: xpInfo.level,
   };
 
   // 2. Evaluate all achievements
   const newlyUnlocked: AchievementDef[] = [];
-  const unlockRecords: { user_id: number; achievement_id: string }[] = [];
 
   for (const achievement of ACHIEVEMENTS) {
     if (alreadyUnlocked.has(achievement.id)) continue;
     if (!achievement.check(ctx)) continue;
-
-    // Collect unlock records; batch insert with createMany + skipDuplicates for safety
-    unlockRecords.push({
-      user_id: userId,
-      achievement_id: achievement.id,
-    });
 
     newlyUnlocked.push({
       id: achievement.id,
@@ -94,9 +106,13 @@ export async function checkAndAwardAchievements(
     });
   }
 
-  if (unlockRecords.length > 0) {
+  // 3. Batch-insert unlock records (skipDuplicates guards against concurrent calls)
+  if (newlyUnlocked.length > 0) {
     await prisma.userAchievement.createMany({
-      data: unlockRecords,
+      data: newlyUnlocked.map((a) => ({
+        user_id: userId,
+        achievement_id: a.id,
+      })),
       skipDuplicates: true,
     });
   }

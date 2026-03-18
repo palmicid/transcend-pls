@@ -6,14 +6,12 @@ export function Composer({
   loading,
   onSend,
   onStop,
-  error,
 }: {
   input: string;
   setInput: (v: string) => void;
   loading: boolean;
   onSend: () => void;
   onStop: () => void;
-  error?: string;
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-3">
@@ -49,15 +47,10 @@ export function Composer({
         )}
       </div>
 
-      {error && (
-        <div className="mt-2 text-sm text-red-400 px-1">
-          ⚠️ {error}
-        </div>
-      )}
-
       <div className="mt-2 text-[13px] text-white/50 px-1 flex items-center gap-1">
-        Powered by <span className="text-white/70">Local LLM via Ollama 🦙</span>
-      </div>
+		Powered by <span className="text-white/70"> Local LLM via Ollama 🦙</span>
+	  </div>
+
     </div>
   );
 }

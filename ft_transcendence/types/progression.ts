@@ -27,5 +27,7 @@ export interface LeaderboardEntry {
   level: number;
   totalXP: number;
   wins: number;
+  draws: number;
+  losses: number;
   totalGames: number;
 }

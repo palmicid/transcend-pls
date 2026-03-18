@@ -1,11 +1,17 @@
 /**
  * @file lib/game/saveGameResult.ts
- * @description Saves completed game results to DB (remote games only, no bots)
+ * @description Saves completed game results to DB.
+ *              Bot games are saved with is_bot_game=true, awarding 1 XP.
+ *              PvP games award full XP based on GameRegistry config.
  */
 
 import prisma from "@/lib/prisma";
 import { calculateXP, awardXP } from "@/lib/game/xpService";
 import { checkAndAwardAchievements } from "@/lib/game/achievementService";
+import bcrypt from "bcryptjs";
+
+const BOT_USER_EMAIL = "bot@transcendence.local";
+const BOT_USER_DISPLAY_NAME = "AI Bot";
 
 interface SaveGameResultParams {
   gameType: string;
@@ -15,22 +21,23 @@ interface SaveGameResultParams {
   isDraw: boolean;
   startedAt: Date;
   finalBoard?: unknown;
+  isBotGame?: boolean;
 }
 
 /**
  * Save a completed game result to the database.
  *
- * SECURITY: Only saves if:
- * - Exactly 2 players
- * - No bot is configured
+ * RULES:
+ * - PvP games (2 human players): full XP based on outcome
+ * - Bot games: flat 1 XP, flagged with is_bot_game=true
  *
  * @returns The created GameResult or null if conditions not met
  */
 export async function saveGameResult(params: SaveGameResultParams) {
-  const { gameType, roomId, players, winnerRole, isDraw, startedAt, finalBoard } = params;
+  const { gameType, roomId, players, winnerRole, isDraw, startedAt, finalBoard, isBotGame = false } = params;
 
-  // GUARD: Must have exactly 2 players
-  if (players.length !== 2) {
+  // GUARD: Must have enough players
+  if ((!isBotGame && players.length !== 2) || (isBotGame && players.length < 1)) {
     console.log("[saveGameResult] Skipped: Not exactly 2 players");
     return null;
   }
@@ -45,15 +52,79 @@ export async function saveGameResult(params: SaveGameResultParams) {
     return null;
   }
 
-  // GUARD: Check for bot in room
-  const room = await prisma.room.findUnique({
-    where: { id: roomId },
-    select: { bot_difficulty: true, bot_role: true },
-  });
+  if (isBotGame) {
+    const humanPlayer = players.find((p) => p.id > 0) ?? players[0];
+    if (!humanPlayer) {
+      console.log("[saveGameResult] Skipped: Bot game without a human player");
+      return null;
+    }
 
-  if (room?.bot_difficulty || room?.bot_role) {
-    console.log("[saveGameResult] Skipped: Game includes a bot");
-    return null;
+    const botPlayer = players.find((p) => p.id !== humanPlayer.id);
+    const inferredBotRole =
+      botPlayer?.role ??
+      (humanPlayer.role === "X"
+        ? "O"
+        : humanPlayer.role === "O"
+          ? "X"
+          : humanPlayer.role === "Red"
+            ? "Yellow"
+            : humanPlayer.role === "Yellow"
+              ? "Red"
+              : null);
+
+    try {
+      const botUser = await prisma.user.upsert({
+        where: { email: BOT_USER_EMAIL },
+        create: {
+          email: BOT_USER_EMAIL,
+          password: await bcrypt.hash(crypto.randomUUID(), 12),
+          display_name: BOT_USER_DISPLAY_NAME,
+          is_verified: false,
+          is_bot: true,
+        },
+        update: {
+          display_name: BOT_USER_DISPLAY_NAME,
+        },
+        select: { id: true },
+      });
+
+      const winnerId =
+        isDraw || !winnerRole
+          ? null
+          : winnerRole === humanPlayer.role
+            ? humanPlayer.id
+            : botUser.id;
+
+      const result = await prisma.gameResult.create({
+        data: {
+          game_type: gameType,
+          room_id: roomId,
+          player1_id: humanPlayer.id,
+          player1_role: humanPlayer.role,
+          player2_id: botUser.id,
+          player2_role: inferredBotRole,
+          winner_id: winnerId,
+          is_draw: isDraw,
+          is_bot_game: true,
+          started_at: startedAt,
+          duration_ms: Date.now() - new Date(startedAt).getTime(),
+          final_board: finalBoard as any,
+          xp_awarded_p1: 1,
+          xp_awarded_p2: 0,
+        },
+      });
+
+      await Promise.all([
+        awardXP(humanPlayer.id, 1),
+        checkAndAwardAchievements(humanPlayer.id),
+      ]);
+
+      console.log(`[saveGameResult] Saved bot game result: ${result.id}`);
+      return result;
+    } catch (error) {
+      console.error("[saveGameResult] Failed to save bot game result:", error);
+      return null;
+    }
   }
 
   // Determine winner user ID from role
@@ -63,14 +134,15 @@ export async function saveGameResult(params: SaveGameResultParams) {
     winnerId = winnerPlayer?.id ?? null;
   }
 
-  // Create the record
   try {
     // Determine each player's outcome
     const p1Result = isDraw ? "draw" : winnerId === players[0].id ? "win" : "loss";
     const p2Result = isDraw ? "draw" : winnerId === players[1].id ? "win" : "loss";
 
-    const xpP1 = calculateXP(gameType, p1Result);
-    const xpP2 = calculateXP(gameType, p2Result);
+    // Bot games: flat 1 XP regardless of outcome
+    // PvP games: full XP based on game type config
+    const xpP1 = isBotGame ? 1 : calculateXP(gameType, p1Result);
+    const xpP2 = isBotGame ? 1 : calculateXP(gameType, p2Result);
 
     const result = await prisma.gameResult.create({
       data: {
@@ -82,6 +154,7 @@ export async function saveGameResult(params: SaveGameResultParams) {
         player2_role: players[1].role,
         winner_id: winnerId,
         is_draw: isDraw,
+        is_bot_game: isBotGame,
         started_at: startedAt,
         duration_ms: Date.now() - new Date(startedAt).getTime(),
         final_board: finalBoard as any,
@@ -90,17 +163,18 @@ export async function saveGameResult(params: SaveGameResultParams) {
       },
     });
 
-    console.log(`[saveGameResult] Saved game result: ${result.id}`);
+    console.log(`[saveGameResult] Saved game result: ${result.id} (bot: ${isBotGame})`);
 
-    // Award XP and check achievements (fire and forget pattern or await, here we await for simplicity)
+    // Award XP
     await Promise.all([
       awardXP(players[0].id, xpP1),
-      awardXP(players[1].id, xpP2),
+      ...(isBotGame ? [] : [awardXP(players[1].id, xpP2)]),
     ]);
 
+    // Check achievements (only for human players)
     await Promise.all([
       checkAndAwardAchievements(players[0].id),
-      checkAndAwardAchievements(players[1].id),
+      ...(isBotGame ? [] : [checkAndAwardAchievements(players[1].id)]),
     ]);
 
     return result;

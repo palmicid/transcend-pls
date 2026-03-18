@@ -19,7 +19,7 @@ This project also emphasizes frontend quality and user experience. A custom-made
 
 - extends time remaining until being absorbed by blackhole
 - upon completion, advances all team members into 42's Advanced Core Cursus
-- 2-factor authentication with Google, 42, Github OAuth
+- 2-factor authentication with Google OAuth
 - Chat with our in-house local model (ollama)
 - Play games with your friends remotely!
 - Custom-made frontend design system with reusable components
@@ -60,13 +60,9 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Developed a challenging AI opponent with human-like behavior (non-perfect play) for single-player matches
 - Added a second game with matchmaking, user match history, and gameplay statistics tracking
 
-### pjerddee (Authentication & Security Management)
+### pjerddee (Role)
 
-- Integrated Google, 42, and GitHub OAuth to provide flexible and secure user onboarding options
-- Developed a 2FA security layer to enhance account protection and prevent unauthorized access
-- Managed stateless session handling using JSON Web Tokens (JWT) for secure and scalable user authorization
-- Implemented Next.js middleware to centralize global route protection and session validation logic.
-- Deployed API routes for managing user and friendship systems.
+- Responsibility 1
 
 ### pnamwayk (Frontend Developer)
 
@@ -84,11 +80,11 @@ This project also emphasizes frontend quality and user experience. A custom-made
 
 - Set up the initial project infrastructure and development environment
 - Designed and implemented the Docker-based architecture for the project
+- Configured containerized services and orchestration using Docker and Make
 - Implemented HTTPS support for the application to ensure secure communication
 - Integrated an AI chat feature powered by a local Ollama model
 - Developed backend logic to communicate with the Ollama model and stream responses to the frontend
 - Ensured the system could run consistently in both development and production environments
-- Designed and implemented a centralized logging system using the ELK stack (Elasticsearch, Logstash, Kibana)
 
 ## Project Management
 
@@ -119,18 +115,6 @@ This project also emphasizes frontend quality and user experience. A custom-made
 ### AI
 - AI: Ollama
   - Ollama is a local model that we run on our machine.
-
-### DevOps / Infrastructure
-
-- **Docker & Docker Compose** for containerized deployment and reproducible environments
-- **Nginx** as an HTTPS reverse proxy for routing and secure external access
-- **ELK Stack**
-  - **Elasticsearch** for centralized log storage and indexing
-  - **Logstash** for log ingestion and processing
-  - **Kibana** for log visualization and monitoring dashboards
-- **GELF logging driver** for exporting container logs to Logstash
-
-
 - Any other significant technologies or libraries.
 - Justification for major technical choices.
 
@@ -215,18 +199,18 @@ This project also emphasizes frontend quality and user experience. A custom-made
 - Streaming responses from the model to the user interface
 - Error handling for model availability and request failures
 - Local AI inference without external API dependencies
-- Implemented by **scharuka**
 
-### Centralized Logging Infrastructure (ELK Stack)
+### Game Statistics and Match History (User Management)
+- Track user game statistics (wins, losses, ranking, level, etc.).
+- Display match history (1v1 games, dates, results, opponents).
+- Show achievements and progression.
+- Leaderboard integration.
 
-- Implemented centralized logging for all containers in the system
-- Docker containers export logs using the GELF logging driver
-- Logstash collects and processes logs before sending them to Elasticsearch
-- Elasticsearch stores and indexes logs for fast querying
-- Kibana dashboards allow real-time log exploration and debugging
-- Implemented a log retention policy using Elasticsearch Index Lifecycle Management (ILM)
-- Logs from services such as Next.js, Nginx, PostgreSQL, MinIO, and Ollama can be inspected through Kibana
-- Implemented by **scharuka**
+### Gamification System (Gaming and User Experience)
+- Implement at least 3 of the following: achievements, badges, leaderboards, XP/level system, daily challenges, rewards.
+- System must be persistent (stored in database).
+- Visual feedback for users (notifications, progress bars, etc.).
+- Clear rules and progression mechanics.
 
 ## Module
 
@@ -249,7 +233,8 @@ This project also emphasizes frontend quality and user experience. A custom-made
 | Major | Gaming and user experience | Add another game with user history and matchmaking | 2 pts | kkaiyawo |
 | Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
 | Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
-| Major | DevOps | Infrastructure for log management using ELK | 2 pts | scharuka |
+| Minor | User Management | Game statistics and match history | 1 pt | kkaiyawo |
+| Minor | Gaming and user experience | A gamification system to reward users for their actions. | 1 pt | TBD |
 
 Total points from these modules: **17 points**
 
@@ -404,31 +389,45 @@ The system includes:
 
 **Contributor:** scharuka
 
-## 10. Infrastructure for log management using ELK
+---
 
-**Type:** Major
-**Category:** DevOps
-**Points:** 2
+## 10. Game statistics and match history
+
+**Type:** Minor
+**Category:** User Management
+**Points:** 1
 
 ### Justification
-
-Centralized logging is essential for monitoring distributed containerized systems.
-Using the ELK stack allows logs from all application services to be collected, indexed, and visualized in a unified interface.
+Tracking statistics, match history, and providing leaderboards improves user engagement and encourages competitive play.
 
 ### Implementation
+- Track user game statistics (wins, losses, ranking, level, etc.).
+- Display match history (1v1 games, dates, results, opponents).
+- Show achievements and progression.
+- Leaderboard integration.
 
-The logging infrastructure was implemented using **Elasticsearch, Logstash, and Kibana**.
+**Contributor:** kkaiyawo
 
-- Docker containers export logs using the **GELF logging driver**
-- **Logstash** receives and processes logs from containers
-- **Elasticsearch** stores and indexes logs for querying
-- **Kibana** provides dashboards for log visualization and filtering
-- **Index Lifecycle Management (ILM)** was configured to automatically delete logs older than the retention period
-- Kibana is exposed through the **Nginx reverse proxy** under `/kibana` for secure access
+---
 
-**Contributor:** scharuka
+## 11. A gamification system to reward users for their actions
 
-## Indeividual Contributions
+**Type:** Minor
+**Category:** Gaming and user experience
+**Points:** 1
+
+### Justification
+Rewards and gamification significantly increase user retention and satisfaction by giving them tangible goals.
+
+### Implementation
+- Implement at least 3 of the following: achievements, badges, leaderboards, XP/level system, daily challenges, rewards.
+- System must be persistent (stored in database).
+- Visual feedback for users (notifications, progress bars, etc.).
+- Clear rules and progression mechanics.
+
+**Contributor:** TBD
+
+## Individual Contributions
 
 - Detailed breakdown of what each team member contributed.
 - Specific features, modules, or components implemented by each person.

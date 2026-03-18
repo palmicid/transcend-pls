@@ -15,7 +15,7 @@ export type GameHistoryEntry = {
   startedAt: Date;
   endedAt: Date;
   result: "win" | "loss" | "draw";
-  opponent: { id: number; displayName: string };
+  opponent: { id: number; displayName: string; avatarUrl: string | null };
   finalBoard: unknown;
   xpEarned: number;
   playerRole: string | null;
@@ -50,8 +50,8 @@ export async function getGameHistory(userId: number, options?: {
       ...(gameType && { game_type: gameType }),
     },
     include: {
-      player1: { select: { id: true, display_name: true } },
-      player2: { select: { id: true, display_name: true } },
+      player1: { select: { id: true, display_name: true, avatar_url: true } },
+      player2: { select: { id: true, display_name: true, avatar_url: true } },
     },
     orderBy: { ended_at: "desc" },
     take: limit,
@@ -62,11 +62,8 @@ export async function getGameHistory(userId: number, options?: {
     const isP1 = result.player1_id === userId;
     const opponent = isP1 ? result.player2 : result.player1;
 
-    const xpEarnedRaw = isP1 ? result.xp_awarded_p1 : result.xp_awarded_p2;
-    const xpEarned = typeof xpEarnedRaw === "number" ? xpEarnedRaw : 0;
-
-    const playerRoleRaw = isP1 ? result.player1_role : result.player2_role;
-    const playerRole = typeof playerRoleRaw === "string" ? playerRoleRaw : null;
+    const xpEarned = isP1 ? result.xp_awarded_p1 : result.xp_awarded_p2;
+    const playerRole = isP1 ? result.player1_role : result.player2_role;
 
     return {
       id: result.id,
@@ -85,6 +82,7 @@ export async function getGameHistory(userId: number, options?: {
       opponent: {
         id: opponent.id,
         displayName: opponent.display_name,
+        avatarUrl: opponent.avatar_url,
       },
       finalBoard: result.final_board,
       xpEarned,
@@ -103,6 +101,7 @@ export async function getPlayerStats(userId: number, gameType?: string): Promise
         { player1_id: userId },
         { player2_id: userId },
       ],
+      is_bot_game: false, // EXCLUDE bot games from W/D/L stats
       ...(gameType && { game_type: gameType }),
     },
     select: {

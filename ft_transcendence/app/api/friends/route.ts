@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server"
 import { friendService } from "@/services/friendService"
 import { userService } from "@/services/userService"
-import { getSession } from "@/lib/auth/auth-session";
 
 // Get all friend relations
 export async function GET() {
@@ -20,7 +19,6 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const session = await getSession();
     if (!body.userId || !body.friendId){
       return NextResponse.json(
         { error: "Invalid user ID/friend ID" },
@@ -40,8 +38,6 @@ export async function POST(req: Request) {
         { status: 409 }
       )
     }
-    if (![body.userId, body.friendId].includes(session.userId))
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const user = await userService.getUserById(body.userId);
     const friend = await userService.getUserById(body.friendId);
     if (!user || !friend){

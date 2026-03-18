@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/auth-session";
-import { getLeaderboard, getUserRank } from "@/lib/game/leaderboardService";
-import prisma from "@/lib/prisma";
+import {
+  getLeaderboard,
+  getLeaderboardTotalCount,
+  getUserRank,
+  type LeaderboardSortBy,
+} from "@/lib/game/leaderboardService";
 
 export async function GET(req: Request) {
   const session = await getSession();
@@ -10,19 +14,27 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const rawLimit = Number(searchParams.get("limit"));
-  const limit = Math.min(
-    Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 20,
-    100
-  );
-  const rawOffset = Number(searchParams.get("offset"));
-  const offset =
-    Number.isFinite(rawOffset) && rawOffset >= 0 ? Math.floor(rawOffset) : 0;
+  const limitParam = searchParams.get("limit");
+  let limit = Number.parseInt(limitParam ?? "", 10);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    limit = 20;
+  }
+  limit = Math.min(limit, 100);
+
+  const offsetParam = searchParams.get("offset");
+  let offset = Number.parseInt(offsetParam ?? "", 10);
+  if (!Number.isFinite(offset) || offset < 0) {
+    offset = 0;
+  }
+
+  const sortByParam = searchParams.get("sortBy");
+  const sortBy: LeaderboardSortBy =
+    sortByParam === "ttt" ? sortByParam : "xp";
 
   const [entries, total, myRank] = await Promise.all([
-    getLeaderboard({ limit, offset }),
-    prisma.playerXP.count(),
-    getUserRank(session.userId),
+    getLeaderboard({ limit, offset, sortBy }),
+    getLeaderboardTotalCount(sortBy),
+    getUserRank(session.userId, sortBy),
   ]);
 
   return NextResponse.json({ entries, total, myRank });

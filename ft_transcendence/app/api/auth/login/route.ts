@@ -14,8 +14,8 @@ export async function POST(req: Request) {
       where: { email },
     });
 
-    //cx if user exits and password match
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    //cx if user exits and password match; also reject bot accounts
+    if (!user || user.is_bot || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }

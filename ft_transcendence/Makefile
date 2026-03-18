@@ -24,9 +24,6 @@ COMPOSE_DEV     := docker-compose.dev.yml
 COMPOSE_PROD    := docker-compose.prod.yml
 COMPOSE_OLLAMA  := docker-compose.ollama.yml
 COMPOSE_NGINX   := docker-compose.nginx.yml
-COMPOSE_LOGGING	:= docker-compose.logging.yml
-COMPOSE_LOGSETUP := docker-compose.logsetting.yml
-
 
 # Project name
 PROJECT_NAME := ft_transcendence
@@ -104,22 +101,20 @@ reset-kibana-pwd:
 # Development Environment
 # ============================================================================
 .PHONY: dev
-dev:  ## Run development environment with Ollama (default)
+dev: ## Run development environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting development environment with Ollama...$(RESET)"
 	docker network create elk
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build
 
 .PHONY: dev-detached
 dev-detached: ## Run development environment with Ollama in background
-	docker network create elk
 	@echo "$(GREEN)🚀 Starting development environment with Ollama (detached)...$(RESET)"
-	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev --profile ollama up --build -d
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) --profile dev --profile ollama up --build -d
 
 .PHONY: dev-no-ollama
 dev-no-ollama: ## Run development environment without Ollama
 	@echo "$(GREEN)🚀 Starting development environment (without Ollama)...$(RESET)"
-	docker network create elk
-	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile dev up --build
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) -f $(COMPOSE_NGINX) --profile dev up --build
 
 .PHONY: dev-no-ollama-detached
 dev-no-ollama-detached: ## Run development environment without Ollama in background
@@ -130,7 +125,7 @@ dev-no-ollama-detached: ## Run development environment without Ollama in backgro
 # Production Environment
 # ============================================================================
 .PHONY: prod
-prod:  ## Run production environment with Ollama (default)
+prod: ## Run production environment with Ollama (default)
 	@echo "$(GREEN)🚀 Starting production environment with Ollama...$(RESET)"
 	docker network create elk
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod --profile ollama up --build -d
@@ -138,13 +133,12 @@ prod:  ## Run production environment with Ollama (default)
 	@sleep 10
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost:8443$(RESET)"
-	@echo "$(CYAN)   Kibana:  https://localhost:8443/kibana/$(RESET)"
+	@echo "$(CYAN)   Ollama:  https://localhost:11434$(RESET)"
 
 .PHONY: prod-no-ollama
 prod-no-ollama: ## Run production environment without Ollama
 	@echo "$(GREEN)🚀 Starting production environment (without Ollama)...$(RESET)"
-	docker network create elk
-	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod up --build -d
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) --profile prod up --build -d
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost$(RESET)"
 
@@ -168,9 +162,7 @@ build-no-ollama: ## Build Docker images without Ollama
 .PHONY: stop
 stop: ## Stop all running containers
 	@echo "$(YELLOW)⏹️  Stopping all containers...$(RESET)"
-## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_PROD) -f $(COMPOSE_DEV) down --remove-orphans
-	docker compose down --remove-orphans
-	docker network prune -f
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down
 	@echo "$(GREEN)✅ All containers stopped$(RESET)"
 
 .PHONY: restart
@@ -185,8 +177,7 @@ clean: ## Remove containers, networks, and volumes
 .PHONY: fclean
 fclean: ## Full clean (containers, volumes, and images)
 	@echo "$(RED)🧹 Full cleanup (containers, volumes, images)...$(RESET)"
-## docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v --rmi all
-	docker compose down -v --rmi all
+	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v --rmi all
 	@echo "$(GREEN)✅ Full cleanup complete$(RESET)"
 
 .PHONY: prune

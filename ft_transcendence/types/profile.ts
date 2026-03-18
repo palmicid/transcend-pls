@@ -26,7 +26,7 @@ export interface ProfileGameSummary {
   startedAt: string;
   endedAt: string;
   result: "win" | "loss" | "draw";
-  opponent: { id: number; displayName: string };
+  opponent: { id: number; displayName: string; avatarUrl: string | null };
   finalBoard: unknown;
   xpEarned?: number;
   playerRole?: string | null;

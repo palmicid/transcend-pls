@@ -1,7 +1,5 @@
 import {
   MessageSquareHeart,
-  Circle,
-  X,
   Gamepad2,
 } from "lucide-react";
 import { FeatureCard } from "@/components/main/FeatureCard";
@@ -32,7 +30,7 @@ function IconWrap({
 
 export function FeatureGrid() {
   return (
-    <section className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3">
+    <section className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2">
       {/* Chat */}
       <FeatureCard
         title="42 AI–Chat"
@@ -47,33 +45,16 @@ export function FeatureGrid() {
         }
       />
 
-      {/* Tic Tac Toe */}
+      {/* Games */}
       <FeatureCard
-        title="Tic–Tac–Toe"
-        desc="Quick match. Simple rules. Try to win in 3-in-a-row!"
-        href="/play/tic-tac-toe"
-        badge="Game"
+        title="Games"
+        desc="Play Tic-Tac-Toe and more — with friends or against bots."
+        href="/play"
+        badge="Play"
 		color="cyan"
         icon={
           <IconWrap className="group-hover:bg-cyan-500/20 group-hover:border-cyan-400/40 group-hover:shadow-[0_0_30px_rgba(34,211,238,0.45)]">
-            <div className="relative h-6 w-6">
-              <Circle className="absolute inset-0 h-6 w-6 text-cyan-300 group-hover:text-cyan-200 transition" />
-              <X className="absolute inset-0 h-6 w-6 text-cyan-300 group-hover:text-cyan-200 transition" />
-            </div>
-          </IconWrap>
-        }
-      />
-
-      {/* Rock Paper Scissors */}
-      <FeatureCard
-        title="Connect4"
-        desc="Fast rounds to settle any debate. Best of 3?"
-        href="/play/connect4"
-        badge="Game"
-		color="emerald"
-        icon={
-          <IconWrap className="group-hover:bg-emerald-500/20 group-hover:border-emerald-400/40 group-hover:shadow-[0_0_30px_rgba(52,211,153,0.45)]">
-            <Gamepad2 className="h-6 w-6 text-emerald-300 group-hover:text-emerald-200 transition" />
+            <Gamepad2 className="h-6 w-6 text-cyan-300 group-hover:text-cyan-200 transition" />
           </IconWrap>
         }
       />

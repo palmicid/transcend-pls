@@ -11,14 +11,10 @@ services:
       - ./nginx/generate-cert.sh:/generate-cert.sh
       - nginx_certs:/etc/nginx/certs
 
-    entrypoint: [ "/bin/sh", "-c", "apk add --no-cache openssl && /generate-cert.sh" ]
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache openssl && /generate-cert.sh"]
 
     depends_on:
       - web
-      - minio
-    networks:
-      - elk
-      - default
 
     restart: unless-stopped
 

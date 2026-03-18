@@ -25,6 +25,7 @@ model User {
   updated_at    DateTime @updatedAt
   secret        String   @default("")
   is_verified   Boolean  @default(false)
+  is_bot        Boolean  @default(false)
   use2FA        Boolean  @default(true)
 
   // Google Auth Relation
@@ -46,8 +47,6 @@ model User {
   // Progression
   xp            PlayerXP?
   achievements  UserAchievement[]
-
-  @@index([online_status, last_active_at])
 }
 
 // Friendships Model
@@ -120,7 +119,7 @@ model RoomPlayer {
 model GameResult {
   id Int @id @default(autoincrement())
 
-  game_type String // "tic-tac-toe", "connect4"
+  game_type String // "tic-tac-toe"
   room_id   String? // Optional link to source Room
   final_board Json?
 
@@ -136,6 +135,7 @@ model GameResult {
   is_draw   Boolean @default(false)
 
   duration_ms Int?
+  is_bot_game   Boolean @default(false) // true if opponent was a bot
   xp_awarded_p1 Int @default(0)   // XP player1 earned from this game
   xp_awarded_p2 Int @default(0)   // XP player2 earned from this game
 
@@ -173,3 +173,5 @@ model UserAchievement {
   @@unique([user_id, achievement_id]) // prevent double-unlocking
   @@index([user_id])
 }
+
+
