@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
   const sortByParam = searchParams.get("sortBy");
   const sortBy: LeaderboardSortBy =
-    sortByParam === "ttt" || sortByParam === "xp" ? sortByParam : "xp";
+    sortByParam === "ttt" ? sortByParam : "xp";
 
   const [entries, total, myRank] = await Promise.all([
     getLeaderboard({ limit, offset, sortBy }),

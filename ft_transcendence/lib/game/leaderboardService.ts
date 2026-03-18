@@ -113,7 +113,7 @@ async function buildPerGameLeaderboard(gameType: "tic-tac-toe" | "connect4"): Pr
 }
 
 /**
- * Fetch a paginated leaderboard ranked by overall XP or per-game (TTT/C4) performance.
+ * Fetch a paginated leaderboard ranked by overall XP or per-game (TTT) performance.
  *
  * Query strategy: Join PlayerXP → User for display info.
  * Win/draw/loss counts come from GameResult aggregations.
@@ -125,9 +125,8 @@ export async function getLeaderboard(options?: {
 }): Promise<LeaderboardEntry[]> {
   const { limit = 20, offset = 0, sortBy = "xp" } = options ?? {};
 
-  if (sortBy === "ttt" || sortBy === "c4") {
-    const gameType = sortBy === "ttt" ? "tic-tac-toe" : "connect4";
-    const ranked = await buildPerGameLeaderboard(gameType);
+  if (sortBy === "ttt") {
+    const ranked = await buildPerGameLeaderboard("tic-tac-toe");
     return ranked
       .slice(offset, offset + limit)
       .map((entry, index) => ({ ...entry, rank: offset + index + 1 }));
@@ -194,7 +193,7 @@ export async function getUserRank(
   userId: number,
   sortBy: LeaderboardSortBy = "xp"
 ): Promise<number> {
-  if (sortBy === "ttt" || sortBy === "c4") {
+  if (sortBy === "ttt") {
     const fullBoard = await getLeaderboard({ limit: 99999, sortBy });
     const userEntry = fullBoard.find((u) => u.userId === userId);
     return userEntry ? userEntry.rank : 0;
@@ -218,9 +217,8 @@ export async function getUserRank(
 export async function getLeaderboardTotalCount(
   sortBy: LeaderboardSortBy = "xp",
 ): Promise<number> {
-  if (sortBy === "ttt" || sortBy === "c4") {
-    const gameType = sortBy === "ttt" ? "tic-tac-toe" : "connect4";
-    const ranked = await buildPerGameLeaderboard(gameType);
+  if (sortBy === "ttt") {
+    const ranked = await buildPerGameLeaderboard("tic-tac-toe");
     return ranked.length;
   }
 

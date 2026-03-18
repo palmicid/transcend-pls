@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Trophy } from "lucide-react";
 import type { LeaderboardEntry } from "@/types/progression";
 
-type SortMode = "xp" | "ttt" | "c4";
+type SortMode = "xp" | "ttt";
 
 const SORT_LABELS: Record<SortMode, string> = {
   xp: "overall",
   ttt: "tic-tac-toe",
-  c4: "connect 4",
 };
 
 export default function PlayLeaderboardPanel() {
@@ -42,8 +41,7 @@ export default function PlayLeaderboardPanel() {
 
   const subtitle = useMemo(() => {
     if (sortBy === "xp") return "Ranked by total XP and level.";
-    if (sortBy === "ttt") return "Ranked by max wins, then best win-rate in Tic-Tac-Toe.";
-    return "Ranked by max wins, then best win-rate in Connect 4.";
+    return "Ranked by max wins, then best win-rate in Tic-Tac-Toe.";
   }, [sortBy]);
 
   return (
@@ -58,7 +56,7 @@ export default function PlayLeaderboardPanel() {
         </div>
 
         <div className="flex p-1 bg-black/20 rounded-xl border border-white/10 overflow-x-auto hide-scrollbar">
-          {(["xp", "ttt", "c4"] as const).map((mode) => {
+          {(["xp", "ttt"] as const).map((mode) => {
             const active = sortBy === mode;
             return (
               <button
