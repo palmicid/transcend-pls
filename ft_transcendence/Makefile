@@ -148,6 +148,11 @@ prod: ## Run production environment with Ollama (default)
 	docker compose -f $(COMPOSE_LOGGING) -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) -f $(COMPOSE_LOGSETUP) --profile prod --profile ollama up --build -d
 	@echo "Waiting for services to stabilize..."
 	@sleep 10
+	@echo "Waiting for Ollama to become ready..."
+	@until docker exec ollama ollama list >/dev/null 2>&1; do \
+		printf "."; \
+		sleep 2; \
+		done
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost:8443$(RESET)"
 	@echo "$(CYAN)   Kibana:  https://localhost:8443/kibana/$(RESET)"
@@ -157,6 +162,11 @@ prod-no-ollama: ## Run production environment without Ollama
 	@echo "$(GREEN)🚀 Starting production environment (without Ollama)...$(RESET)"
 	make create-network
 	docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_PROD) -f $(COMPOSE_NGINX) --profile prod up --build -d
+		@echo "Waiting for Ollama to become ready..."
+	@until docker exec ollama ollama list >/dev/null 2>&1; do \
+		printf "."; \
+		sleep 2; \
+		done
 	@echo "$(GREEN)✅ Production environment is running$(RESET)"
 	@echo "$(CYAN)   Web app: https://localhost$(RESET)"
 	@echo "$(CYAN)   Kibana:  https://localhost:8443/kibana/$(RESET)"
@@ -199,9 +209,8 @@ clean: ## Remove containers, networks, and volumes
 .PHONY: fclean
 fclean: ## Full clean (containers, volumes, and images)
 	@echo "$(RED)🧹 Full cleanup (containers, volumes, images)...$(RESET)"
-	# docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v --rmi all
-	docker compose down --remove-orphans -v --rmi
-	docker network prune -f
+# docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_OLLAMA) -f $(COMPOSE_NGINX) down -v all
+	docker compose down --remove-orphans -v
 	@echo "$(GREEN)✅ Full cleanup complete$(RESET)"
 
 .PHONY: prune
