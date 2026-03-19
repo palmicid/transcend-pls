@@ -13,7 +13,7 @@ const passwordSchema = z.string()
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
 
 const registerSchema = z.object({
-    email: emailSchema,
+    email: emailSchema.toLowerCase(),
     password: passwordSchema,
 });
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         }
 
         const { email, password } = parsed.data;
-        
+
         //hash password
         const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(password, salt);
