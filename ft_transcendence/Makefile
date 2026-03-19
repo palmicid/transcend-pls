@@ -11,6 +11,8 @@
 #   make logs            - View logs from all services
 # ============================================================================
 
+include .env
+
 # Colors for terminal output
 GREEN  := \033[0;32m
 YELLOW := \033[0;33m
@@ -86,18 +88,19 @@ logging:
 
 .PHONY: reset-kibana-pwd
 reset-kibana-pwd:
-	@echo "Waiting for Elasticsearch..."
-	@until docker exec elasticsearch curl -sk http://localhost:9200 >/dev/null; do \
-		sleep 2; \
-	done
+	@echo "Waiting for Elasticsearch cluster..."
+	@until docker exec elasticsearch curl -sk -u elastic:$(ELASTIC_PASSWORD) \
+		http://localhost:9200/_cluster/health | grep -q '"status":"yellow"\|"status":"green"'; do \
+			sleep 3; \
+		done
 	@echo "Elasticsearch is ready!"
 	@echo "Resetting Kibana system password..."
-	$(eval NEW_PWD := $(shell docker exec elasticsearch bin/elasticsearch-reset-password -u kibana_system --silent --batch))
-	@if [ -z "$(NEW_PWD)" ]; then \
+	@NEW_PWD=$$(docker exec elasticsearch bin/elasticsearch-reset-password -u kibana_system --silent --batch | tail -n1); \
+	if [ -z "$$NEW_PWD" ]; then \
 		echo "Error: Failed to retrieve new password."; exit 1; \
-	fi
-	@sed -i 's|^KIBANA_PASSWORD=.*|KIBANA_PASSWORD=$(NEW_PWD)|' .env
-	@echo "Success! KIBANA_PASSWORD updated in .env"
+	fi; \
+	sed -i "s|^KIBANA_PASSWORD=.*|KIBANA_PASSWORD=$$NEW_PWD|" .env; \
+	echo "Success! KIBANA_PASSWORD updated in .env"
 
 .PHONY: create-network
 create-network:
