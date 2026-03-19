@@ -262,7 +262,7 @@ db-push: ## Push Prisma schema to database
 .PHONY: db-studio
 db-studio: ## Open Prisma Studio
 	@echo "$(GREEN)🎨 Opening Prisma Studio...$(RESET)"
-	npx prisma studio
+	docker exec nextjs-app-dev npx prisma studio --browser none
 
 .PHONY: db-shell
 db-shell: ## Open PostgreSQL shell
