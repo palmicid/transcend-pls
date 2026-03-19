@@ -56,9 +56,8 @@ export function Composer({
       )}
 
       <div className="mt-2 text-[13px] text-white/50 px-1 flex items-center gap-1">
-		Powered by <span className="text-white/70">Local LLM via Ollama 🦙</span>
-	  </div>
-
+        Powered by <span className="text-white/70">Local LLM via Ollama 🦙</span>
+      </div>
     </div>
   );
 }
