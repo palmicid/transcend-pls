@@ -14,6 +14,7 @@ export function ChatPanel({
   onStop,
   onNewMobile,
   bottomRef,
+  error,
 }: {
   thread: ChatThread;
   loading: boolean;
@@ -23,6 +24,7 @@ export function ChatPanel({
   onStop: () => void;
   onNewMobile: () => void;
   bottomRef: React.RefObject<HTMLDivElement>;
+  error?: string;
 }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-xl overflow-hidden">
@@ -55,6 +57,7 @@ export function ChatPanel({
           loading={loading}
           onSend={onSend}
           onStop={onStop}
+          error={error}
         />
       </div>
     </section>
