@@ -5,11 +5,12 @@ services:
   web:
     container_name: nextjs-app
     build: .
-    ports:
-      # - "3000:3000"
-      - "51212:51212" # for Prisma studio
+    # ports:
+    #   # - "3000:3000"
+    #   - "51212:51212" # for Prisma studio
     expose:
-      - 3000
+      - "3000"
+      - "51212"
     env_file:
       - .env
     depends_on:
@@ -19,8 +20,10 @@ services:
   db:
     container_name: postgres-db
     image: postgres:16-alpine
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
+    expose:
+      - "5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -32,9 +35,12 @@ services:
   minio:
     container_name: minio
     image: minio/minio:latest
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    # ports:
+    #   - "9000:9000"
+    #   - "9001:9001"
+    expose:
+      - "9000"
+      - "9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
