@@ -204,9 +204,13 @@ npm test:watch        # Run tests in watch mode
 - Integrated frontend pages with APIs for dynamic data fetching and user interaction
 - Implemented advanced search functionality for the friends page, including filters, sorting, and pagination support
 
-### pruangde (PM)
+### pruangde (PM) (Database & Backend API)
 
-- Responsibility 1
+- Designed a PostgreSQL database schema to efficiently manage user profiles, authentication credentials, and friendships.
+- Implemented Prisma ORM for type-safe database operations, streamlined schema migrations, and secure, efficient data querying throughout the backend API.
+- Developed robust and secure API endpoints to handle standard user registration and login flows, including password management and session handling.
+- Architected a heartbeat monitoring mechanism to accurately track and update users' real-time online/offline status across the platform.
+- Integrated MinIO as an S3-compatible object storage solution to reliably process, store, and serve user profile pictures.
 
 ### scharuka (Tech Lead)(DevOps & AI Integration)
 
@@ -393,26 +397,36 @@ npm test:watch        # Run tests in watch mode
 - Which team member(s) worked on each module.
 
 ### Selected Modules
+### Selected Modules
 
 | Type | Category | Module | Points | Contributor |
 |-----|-----|-----|-----|-----|
 | Minor | Web | Use a frontend framework (React / Next.js) | 1 pt | pnamwayk |
+| Minor | Web | Use a backend framework (Express, Fastify, NestJS, Django, etc.). | 1 pt | pjerddee pruangde |
+| Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
+| Minor | Web | Use an ORM for the database. | 1 pt | pruangde |
+| Minor | Web | Server-Side Rendering (SSR) for improved performance and SEO. | 1 pt | scharuka |
 | Minor | Web | Custom-made design system with reusable components | 1 pt | pnamwayk |
 | Minor | Web | Advanced search functionality (filters, sorting, pagination) | 1 pt | pnamwayk |
+| Minor | Accessibility | Support for additional browsers. | 1 pt | ALL |
+| Major | User Management | Standard user management and authentication.| 2 pt| pruangde pjerddee | 
+| Minor | User Management | Game statistics and match history | 1 pt | kkaiyawo |
+| Minor | User Management | Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.) | 1 pt | pjerddee |
+| Minor | User Management | Implement a complete 2FA (Two-Factor Authentication) system for the users. | 1 pt | pjerddee |
 | Major | Artificial Intelligence | Introduce an AI Opponent for games. | 2 pts | kkaiyawo |
+| Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
 | Major | Gaming and user experience | Implement a complete web-based game where users can play against each other. | 2 pts | kkaiyawo |
 | Major | Gaming and user experience | Remote players - Enable two players on separate computers to play the same game in real-time. | 2 pts | kkaiyawo |
-| Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
-| Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
-| Major | DevOps | Infrastructure for log management using ELK | 2 pts | scharuka |
-| Minor | User Management | Game statistics and match history | 1 pt | kkaiyawo |
 | Minor | Gaming and user experience | A gamification system to reward users for their actions. | 1 pt | kkaiyawo |
+| Minor | Gaming and user experience | Implement spectator mode for games | 1 pt | kkaiyawo |
+| Major | DevOops | Infrastructure for log management using ELK (Elasticsearch, Logstash, Kibana). | 2 pt | scharuka |
 
-Total points from these modules: **16 points**
+
+Total points from these modules: **26 points**
 
 ---
 
-### 1. Use a Frontend Framework
+### 1. Use a frontend framework (React / Next.js)
 
 **Type:** Minor
 **Category:** Web
@@ -428,7 +442,74 @@ The frontend was implemented using **Next.js (React)** with **TypeScript**, **Ta
 
 ---
 
-### 2. Custom-made Design System with Reusable Components
+### 2. Use a backend framework (Express, Fastify, NestJS, Django, etc.)
+
+**Type:** Minor
+**Category:** Web
+**Points:** 1
+
+#### Justification
+A backend framework is required to handle API requests, authentication, database operations, and real-time connections securely.
+
+#### Implementation
+**Next.js Route Handlers (API Routes)** were used as the serverless backend framework. This seamless integration allows the backend and frontend to share TypeScript types and be developed together within the same Next.js application.
+
+**Contributor:** pjerddee, pruangde
+
+---
+
+### 3. Implement real-time features using WebSockets or similar technology.
+
+**Type:** Major
+**Category:** Web
+**Points:** 2
+
+#### Justification
+Real-time communication is essential for live multiplayer gameplay, synchronized room state, and responsive cross-client user experience.
+
+#### Implementation
+Implemented real-time updates using SSE (a WebSocket-like streaming technology) with room-scoped broadcasting, connection lifecycle handling, and reconnection resilience:
+- **Real-time updates across clients:** Server push streams deliver state changes to all connected room subscribers with low latency
+- **Handle connection/disconnection gracefully:** Stream cleanup, keep-alive behavior, and deferred player removal ensure stable connections
+- **Efficient message broadcasting:** In-memory room-based pub/sub listener sets optimize performance for multiple concurrent players
+
+**Contributor:** kkaiyawo
+
+---
+
+### 4. Use an ORM for the database.
+
+**Type:** Minor
+**Category:** Web
+**Points:** 1
+
+#### Justification
+An ORM provides type-safe database queries, simplifies schema management, and prevents SQL injection vulnerabilities.
+
+#### Implementation
+**Prisma ORM** was used with the `@prisma/adapter-pg` PostgreSQL adapter. The database schema was defined using Prisma schema language, with migrations ensuring consistent database tracking and type-safe query generation across the app.
+
+**Contributor:** pruangde
+
+---
+
+### 5. Server-Side Rendering (SSR) for improved performance and SEO.
+
+**Type:** Minor
+**Category:** Web
+**Points:** 1
+
+#### Justification
+SSR improves initial page load speed and ensures SEO compliance by rendering HTML on the server before sending it to the client.
+
+#### Implementation
+Next.js **Server Components and SSR features** were implemented, allowing data fetching and UI rendering to happen securely and quickly on the server.
+
+**Contributor:** scharuka
+
+---
+
+### 6. Custom-made design system with reusable components
 
 **Type:** Minor
 **Category:** Web
@@ -444,7 +525,7 @@ Defined a shared **color palette, typography rules, and icon system** (Lucide Re
 
 ---
 
-### 3. Advanced Search Functionality
+### 7. Advanced search functionality (filters, sorting, pagination)
 
 **Type:** Minor
 **Category:** Web
@@ -460,7 +541,91 @@ Implemented **search, filtering, sorting, and optional pagination** to efficient
 
 ---
 
-### 4. Introduce an AI Opponent for games.
+### 8. Support for additional browsers.
+
+**Type:** Minor
+**Category:** Accessibility
+**Points:** 1
+
+#### Justification
+Accessibility across different web browsers is critical to reach a wider audience and provide a consistent user experience.
+
+#### Implementation
+The UI was built using **Tailwind CSS** and standard web APIs to ensure cross-browser compatibility across major modern browsers (Chrome, Firefox, Safari, Edge).
+
+**Contributor:** ALL
+
+---
+
+### 9. Standard user management and authentication.
+
+**Type:** Major
+**Category:** User Management
+**Points:** 2
+
+#### Justification
+Secure, persistent user identification and data protection are fundamental requirements for tracking progression, friends, and game history.
+
+#### Implementation
+Setup comprehensive authentication and registration flows using **NextAuth.js v5 (Auth.js)** and **bcryptjs** for secure password hashing. User sessions, profiles, and relationships are stored securely in PostgreSQL.
+
+**Contributor:** pruangde, pjerddee
+
+---
+
+### 10. Game statistics and match history
+
+**Type:** Minor
+**Category:** User Management
+**Points:** 1
+
+#### Justification
+Tracking statistics, match history, and providing leaderboards improves user engagement and encourages competitive play.
+
+#### Implementation
+Implemented persistent tracking of user game statistics and match history:
+- **Track user game statistics:** Wins, losses, ranking, level, and other performance metrics
+- **Display match history:** 1v1 games with dates, results, and opponent information
+- **Show achievements and progression:** Visual representation of user milestones and advancement
+- **Leaderboard integration:** Global rankings to encourage competitive play
+
+**Contributor:** kkaiyawo
+
+---
+
+### 11. Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.)
+
+**Type:** Minor
+**Category:** User Management
+**Points:** 1
+
+#### Justification
+Remote authentication reduces login friction for users and delegates security credential handling to trusted identity providers.
+
+#### Implementation
+Implemented **Google OAuth 2.0** integration using NextAuth.js providers, allowing users to sign in or link their Google accounts for one-click authentication.
+
+**Contributor:** pjerddee
+
+---
+
+### 12. Implement a complete 2FA (Two-Factor Authentication) system for the users.
+
+**Type:** Minor
+**Category:** User Management
+**Points:** 1
+
+#### Justification
+Two-factor authentication adds a critical layer of security to user accounts against password compromise.
+
+#### Implementation
+Developed a TOTP-based 2FA system using **otplib** and **qrcode**. Users scan a generated QR code with an authenticator app, and the App validates the time-based token during the login flow.
+
+**Contributor:** pjerddee
+
+---
+
+### 13. Introduce an AI Opponent for games.
 
 **Type:** Major
 **Category:** Artificial Intelligence
@@ -482,67 +647,7 @@ The AI system is built to be robust across different game configurations and dif
 
 ---
 
-### 5. Implement a complete web-based game where users can play against each other.
-
-**Type:** Major
-**Category:** Gaming and user experience
-**Points:** 2
-
-#### Justification
-A complete multiplayer game module is central to the project objective and demonstrates full-stack gameplay engineering from room setup to match resolution.
-
-#### Implementation
-Built a complete browser-based game loop with clear rules, live multiplayer turns, deterministic game state transitions, and explicit win/loss conditions.
-
-Key requirements met:
-- The game is real-time multiplayer (Tic-Tac-Toe)
-- Players are able to play live matches
-- The game has clear rules and win/loss conditions
-- The game is 2D with browser-based rendering
-
-**Contributor:** kkaiyawo
-
----
-
-### 6. Remote players - Enable two players on separate computers to play the same game in real-time.
-
-**Type:** Major
-**Category:** Gaming and user experience
-**Points:** 2
-
-#### Justification
-Remote real-time play enables core user value for the platform and ensures the game experience works across separate machines and networks.
-
-#### Implementation
-Implemented synchronized real-time gameplay for two remote users with robust network handling:
-- Handle network latency and disconnections gracefully
-- Provide a smooth user experience for remote gameplay
-- Implement reconnection logic to restore interrupted sessions
-
-The system includes latency-aware state synchronization, graceful disconnection handling, and automatic reconnection to keep matches responsive and stable.
-
-**Contributor:** kkaiyawo
-
----
-
-### 7. Implement real-time features using WebSockets or similar technology.
-
-**Type:** Major
-**Category:** Web
-**Points:** 2
-
-#### Justification
-Real-time communication is essential for live multiplayer gameplay, synchronized room state, and responsive cross-client user experience.
-
-#### Implementation
-Implemented real-time updates using SSE (a WebSocket-like streaming technology) with room-scoped broadcasting, connection lifecycle handling, and reconnection resilience:
-- **Real-time updates across clients:** Server push streams deliver state changes to all connected room subscribers with low latency
-- **Handle connection/disconnection gracefully:** Stream cleanup, keep-alive behavior, and deferred player removal ensure stable connections
-- **Efficient message broadcasting:** In-memory room-based pub/sub listener sets optimize performance for multiple concurrent players
-
-**Contributor:** kkaiyawo
-
-### 8. Implement a complete LLM system interface
+### 14. Implement a complete LLM system interface (AI Chat using Ollama)
 
 **Type:** Major
 **Category:** Artificial Intelligence
@@ -564,27 +669,50 @@ The system includes:
 
 ---
 
-### 9. Game statistics and match history
+### 15. Implement a complete web-based game where users can play against each other.
 
-**Type:** Minor
-**Category:** User Management
-**Points:** 1
+**Type:** Major
+**Category:** Gaming and user experience
+**Points:** 2
 
 #### Justification
-Tracking statistics, match history, and providing leaderboards improves user engagement and encourages competitive play.
+A complete multiplayer game module is central to the project objective and demonstrates full-stack gameplay engineering from room setup to match resolution.
 
 #### Implementation
-Implemented persistent tracking of user game statistics and match history:
-- **Track user game statistics:** Wins, losses, ranking, level, and other performance metrics
-- **Display match history:** 1v1 games with dates, results, and opponent information
-- **Show achievements and progression:** Visual representation of user milestones and advancement
-- **Leaderboard integration:** Global rankings to encourage competitive play
+Built a complete browser-based game loop with clear rules, live multiplayer turns, deterministic game state transitions, and explicit win/loss conditions.
+
+Key requirements met:
+- The game is real-time multiplayer (Tic-Tac-Toe)
+- Players are able to play live matches
+- The game has clear rules and win/loss conditions
+- The game is 2D with browser-based rendering
 
 **Contributor:** kkaiyawo
 
 ---
 
-### 10. A gamification system to reward users for their actions
+### 16. Remote players - Enable two players on separate computers to play the same game in real-time.
+
+**Type:** Major
+**Category:** Gaming and user experience
+**Points:** 2
+
+#### Justification
+Remote real-time play enables core user value for the platform and ensures the game experience works across separate machines and networks.
+
+#### Implementation
+Implemented synchronized real-time gameplay for two remote users with robust network handling:
+- Handle network latency and disconnections gracefully
+- Provide a smooth user experience for remote gameplay
+- Implement reconnection logic to restore interrupted sessions
+
+The system includes latency-aware state synchronization, graceful disconnection handling, and automatic reconnection to keep matches responsive and stable.
+
+**Contributor:** kkaiyawo
+
+---
+
+### 17. A gamification system to reward users for their actions.
 
 **Type:** Minor
 **Category:** Gaming and user experience
@@ -604,25 +732,33 @@ Implemented a comprehensive gamification system with multiple reward mechanisms:
 
 ---
 
-### 11. Infrastructure for log management using ELK
+### 18. Implement spectator mode for games
+
+**Type:** Minor
+**Category:** Gaming and user experience
+**Points:** 1
+
+#### Justification
+Allowing other users to spectate live matches increases engagement, fosters community interaction, and provides a way for users to observe high-level gameplay without participating.
+
+#### Implementation
+Extended the **SSE real-time room broadcasting architecture** to support read-only spectator connections. Spectators receive the same game state updates as players, allowing them to watch the live action sync across the game room.
+
+**Contributor:** kkaiyawo
+
+---
+
+### 19. Infrastructure for log management using ELK (Elasticsearch, Logstash, Kibana).
 
 **Type:** Major
-**Category:** DevOps
+**Category:** DevOops
 **Points:** 2
 
 #### Justification
-Centralized logging is essential for monitoring distributed containerized systems.
-Using the ELK stack allows logs from all application services to be collected, indexed, and visualized in a unified interface.
+Real-time logging infrastructure is essential for production environments to centralize telemetry, debug issues rapidly, and monitor server health without directly accessing individual container logs.
 
 #### Implementation
-The logging infrastructure was implemented using **Elasticsearch, Logstash, and Kibana**.
-
-- Docker containers export logs using the **GELF logging driver**
-- **Logstash** receives and processes logs from containers
-- **Elasticsearch** stores and indexes logs for querying
-- **Kibana** provides dashboards for log visualization and filtering
-- **Index Lifecycle Management (ILM)** was configured to automatically delete logs older than the retention period
-- Kibana is exposed through the **Nginx reverse proxy** under `/kibana` for secure access
+Deployed an **ELK Stack (Elasticsearch, Logstash, Kibana)** via Docker Compose sidecar configurations (`docker-compose.logging.yml`). Application logs generated by **Pino** are ingested into Logstash, stored and indexed in Elasticsearch, and visualized through dashboards in Kibana.
 
 **Contributor:** scharuka
 
@@ -683,7 +819,21 @@ The logging infrastructure was implemented using **Elasticsearch, Logstash, and 
 - Created comprehensive deployment scripts and Make targets for dev/prod environments
 - Implemented structured logging using Pino for system visibility and debugging
 
-### pjerddee & praungde — Supporting Contributors
+### pruangde — Database & Backend API (4 Module Points)
+
+**Modules Implemented:**
+- Use a backend framework (Minor, Web, 1 pt)
+- Use an ORM for the database (Minor, Web, 1 pt)
+- Standard user management and authentication (Major, User Management, 2 pts)
+
+**Key Contributions:**
+- Designed a PostgreSQL database schema to efficiently manage user profiles, authentication credentials, and friendships.
+- Implemented Prisma ORM for type-safe database operations, streamlined schema migrations, and secure, efficient data querying throughout the backend API.
+- Developed robust and secure API endpoints to handle standard user registration and login flows, including password management and session handling.
+- Architected a heartbeat monitoring mechanism to accurately track and update users' real-time online/offline status across the platform.
+- Integrated MinIO as an S3-compatible object storage solution to reliably process, store, and serve user profile pictures.
+
+### pjerddee — Supporting Contributor
 
 - Contributed to team discussions, code reviews, and debugging efforts
 - Assisted with Docker configuration and environment setup
