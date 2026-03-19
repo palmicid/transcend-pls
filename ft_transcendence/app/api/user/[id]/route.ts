@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { PrismaClientKnownRequestError, PrismaClientValidationError } from "@prisma/client/runtime/client"
-import { userService } from "@/services/userService"
+import { userService, userUpdateSchema } from "@/services/userService"
 import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { getSession } from "@/lib/auth/auth-session";
 
 // Get user by ID
 export async function GET(
@@ -31,25 +33,44 @@ export async function PATCH(
 ) {
   const { id } = await params
   try {
+    const session = await getSession();
+    if (!session || session?.userId !== parseInt(id))
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const body = await _request.json();
-    if (body.password)
-      body.password = await bcrypt.hash(body.password, 12);
+    const validatedBody = await userUpdateSchema.parse(body);
+    if (validatedBody.password)
+      validatedBody.password = await bcrypt.hash(validatedBody.password, 12);
     const updateUser = await prisma.user.update({
       where: {
         id: parseInt(id),
       },
       data: {
-        ...body
+        ...validatedBody
       },
+      select: {
+        id: true,
+        email: true,
+        display_name: true,
+        avatar_url: true,
+        online_status: true,
+        created_at: true,
+        is_verified: true,
+        use2FA: true,
+      }
     })
     return NextResponse.json(updateUser, { status: 201 })
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError){
       if (err.code == 'P2025')
-        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    if (err instanceof PrismaClientValidationError)
-      return NextResponse.json({ error: 'Invalid JSON body request' }, { status: 400 })
+    if (err instanceof PrismaClientValidationError){
+      return NextResponse.json({ error: 'Invalid JSON body request' }, { status: 400 });
+    }
+    if (err instanceof z.ZodError){
+      const [issue] = err.issues;
+      return NextResponse.json({ error: issue?.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "Failed to update user" },
       { status: 500 }
@@ -64,8 +85,21 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
+    const session = await getSession();
+    if (!session || session?.userId !== parseInt(id))
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const deleteUser = await prisma.user.delete({
-      where: { id: parseInt(id)}
+      where: { id: parseInt(id)},
+      select: {
+        id: true,
+        email: true,
+        display_name: true,
+        avatar_url: true,
+        online_status: true,
+        created_at: true,
+        is_verified: true,
+        use2FA: true,
+      }
     })
     return NextResponse.json(deleteUser, { status: 200 })
   } catch(err) {

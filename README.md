@@ -49,7 +49,7 @@ Our forever ft_transcendence project.
 
 - extends time remaining until being absorbed by blackhole
 - upon completion, advances all team members into 42's Advanced Core Cursus
-- 2-factor authentication with Google OAuth
+- 2-factor authentication with Google, 42, Github OAuth
 - Chat with our in-house local model (ollama)
 - Play games with your friends remotely!
 - Custom-made frontend design system with reusable components
@@ -157,7 +157,7 @@ npm test:watch        # Run tests in watch mode
 
 ## Team Information
 
-### kkaiyawo (Game Engine, Real-Time Architecture & Player Progression)
+### kkaiyawo (PO) (Game Engine, Real-Time Architecture & Player Progression)
 
 **Game Engine & Multiplayer Framework**
 - Architected and implemented core multiplayer game engine supporting turn-based gameplay
@@ -188,11 +188,15 @@ npm test:watch        # Run tests in watch mode
 - Created global leaderboards indexed on cumulative XP for competitive ranking
 - Integrated gamification mechanics including visual feedback, progress bars, and progression rewards
 
-### pjerddee (Role)
+### pjerddee (Developer/Tester) (Authentication & Security Management)
 
-- Responsibility 1
+- Integrated Google, 42, and GitHub OAuth to provide flexible and secure user onboarding options
+- Developed a 2FA security layer to enhance account protection and prevent unauthorized access
+- Managed stateless session handling using JSON Web Tokens (JWT) for secure and scalable user authorization
+- Implemented Next.js middleware to centralize global route protection and session validation logic.
+- Deployed API routes for managing user and friendship systems.
 
-### pnamwayk (Frontend Developer)
+### pnamwayk (Developer) (Frontend Developer)
 
 - Designed and implemented the frontend architecture for several user-facing pages
 - Created a custom-made design system including color palette, typography, icon usage, and reusable UI components
@@ -200,11 +204,11 @@ npm test:watch        # Run tests in watch mode
 - Integrated frontend pages with APIs for dynamic data fetching and user interaction
 - Implemented advanced search functionality for the friends page, including filters, sorting, and pagination support
 
-### pruangde (Role)
+### pruangde (PM)
 
 - Responsibility 1
 
-### scharuka (DevOps & AI Integration)
+### scharuka (Tech Lead)(DevOps & AI Integration)
 
 - Set up the initial project infrastructure and development environment
 - Designed and implemented the Docker-based architecture for the project
@@ -213,6 +217,7 @@ npm test:watch        # Run tests in watch mode
 - Integrated an AI chat feature powered by a local Ollama model
 - Developed backend logic to communicate with the Ollama model and stream responses to the frontend
 - Ensured the system could run consistently in both development and production environments
+- Designed and implemented a centralized logging system using the ELK stack (Elasticsearch, Logstash, Kibana)
 
 ## Project Management
 
@@ -369,6 +374,16 @@ npm test:watch        # Run tests in watch mode
 - Clear rules and progression mechanics.
 - Implemented by **kkaiyawo**
 
+### DevOps / Infrastructure
+
+- **Docker & Docker Compose** for containerized deployment and reproducible environments
+- **Nginx** as an HTTPS reverse proxy for routing and secure external access
+- **ELK Stack**
+  - **Elasticsearch** for centralized log storage and indexing
+  - **Logstash** for log ingestion and processing
+  - **Kibana** for log visualization and monitoring dashboards
+- **GELF logging driver** for exporting container logs to Logstash
+
 ## Module
 
 - List of all chosen modules (Major and Minor).
@@ -389,6 +404,7 @@ npm test:watch        # Run tests in watch mode
 | Major | Gaming and user experience | Remote players - Enable two players on separate computers to play the same game in real-time. | 2 pts | kkaiyawo |
 | Major | Web | Implement real-time features using WebSockets or similar technology. | 2 pts | kkaiyawo |
 | Major | Artificial Intelligence | Implement a complete LLM system interface (AI Chat using Ollama) | 2 pts | scharuka |
+| Major | DevOps | Infrastructure for log management using ELK | 2 pts | scharuka |
 | Minor | User Management | Game statistics and match history | 1 pt | kkaiyawo |
 | Minor | Gaming and user experience | A gamification system to reward users for their actions. | 1 pt | kkaiyawo |
 
@@ -585,6 +601,30 @@ Implemented a comprehensive gamification system with multiple reward mechanisms:
 - **Clear mechanics:** Well-defined rules and progression mechanics encourage continued engagement
 
 **Contributor:** kkaiyawo
+
+---
+
+### 11. Infrastructure for log management using ELK
+
+**Type:** Major
+**Category:** DevOps
+**Points:** 2
+
+#### Justification
+Centralized logging is essential for monitoring distributed containerized systems.
+Using the ELK stack allows logs from all application services to be collected, indexed, and visualized in a unified interface.
+
+#### Implementation
+The logging infrastructure was implemented using **Elasticsearch, Logstash, and Kibana**.
+
+- Docker containers export logs using the **GELF logging driver**
+- **Logstash** receives and processes logs from containers
+- **Elasticsearch** stores and indexes logs for querying
+- **Kibana** provides dashboards for log visualization and filtering
+- **Index Lifecycle Management (ILM)** was configured to automatically delete logs older than the retention period
+- Kibana is exposed through the **Nginx reverse proxy** under `/kibana` for secure access
+
+**Contributor:** scharuka
 
 ## Individual Contributions
 

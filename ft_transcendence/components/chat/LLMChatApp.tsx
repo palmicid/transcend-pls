@@ -27,6 +27,7 @@ export default function LLMChatApp() {
     if (loading) return;
 
     const text = input.trim();
+
     if (!text) return;
 
     setInput("");
