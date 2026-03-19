@@ -67,12 +67,7 @@ export async function uploadAvatar(
         "Content-Type": contentType,
     });
 
-    // Build the public URL — in Docker the browser accesses MinIO via localhost:9000
-    const publicHost = process.env.MINIO_PUBLIC_HOST || "localhost";
-    const publicPort = process.env.MINIO_PUBLIC_PORT || "9000";
-    const protocol = MINIO_USE_SSL ? "https" : "http";
-
-    return `${protocol}://${publicHost}:${publicPort}/${MINIO_BUCKET}/${objectName}`;
+    return `/minio/${MINIO_BUCKET}/${objectName}`;
 }
 
 export { minioClient, MINIO_BUCKET };
