@@ -118,6 +118,15 @@ function schedulePendingRemoval(
 	pendingRemovals.set(key, timer);
 }
 
+function scheduleBotMoveOnReconnect(room: Room): void {
+	if (room.status !== "IN_GAME") return;
+
+	const game = room.game as { scheduleBotMoveIfNeeded?: () => void } | null;
+	if (typeof game?.scheduleBotMoveIfNeeded !== "function") return;
+
+	game.scheduleBotMoveIfNeeded();
+}
+
 // =============================================================================
 // FACTORY FUNCTION
 // =============================================================================
@@ -261,6 +270,7 @@ export function createGameSSERouteHandler(gameId: string) {
 					send({ event: "snapshot", data: { ...snapshot, myRole: role } });
 				}
 				await broadcastSnapshot(roomId, "player_joined");
+				scheduleBotMoveOnReconnect(room);
 			},
 
 			onSubscribe: (send) => {
