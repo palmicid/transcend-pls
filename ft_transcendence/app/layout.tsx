@@ -29,11 +29,11 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <HeartbeatProvider>
-          <nav className="p-4 border-b flex gap-4 text-white">
+          {/* <nav className="p-4 border-b flex gap-4 text-white">
             <Link href="/">Home</Link>
             <Link href="/chat">AI Assistant</Link>
             <Link href="/play">Tic-Tac-Toe</Link>
-          </nav>
+          </nav> */}
           {children}
         </HeartbeatProvider>
       </body>
