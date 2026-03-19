@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
 
   serverExternalPackages: ["pino", "pino-pretty"],
 
+  experimental: {
+    instrumentationHook: true,
+  },
+
   typescript: {
     ignoreBuildErrors: true,
   },
