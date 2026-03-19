@@ -84,7 +84,7 @@ Our forever ft_transcendence project.
 
 3. Access the application:
    - Web interface: `https://localhost:8443` (development) or `https://localhost:8443` (production)
-   - Database admin (Prisma Studio): `npm run db:studio`
+   - Kibana dashboard: `https://localhost:8443/kibana`
    - Run tests: `npm test`
 
 ### Environment Configuration
@@ -95,6 +95,7 @@ Copy `.env.example` to `.env.local` and configure:
 - Ollama API endpoint (for local AI models)
 - MinIO credentials (for file storage)
 - Session secrets and API keys
+- Elasticsearch credentials (if security enabled)
 
 ### Other Useful Commands
 
@@ -831,7 +832,7 @@ Deployed an **ELK Stack (Elasticsearch, Logstash, Kibana)** via Docker Compose s
 - Built backend logic for model communication and error handling
 - Established HTTPS support with Nginx reverse proxy and certificate management
 - Created comprehensive deployment scripts and Make targets for dev/prod environments
-- Implemented structured logging using Pino for system visibility and debugging
+- Implemented structured logging using GELF, Logstash, Elasticsearch, and Kibana.
 
 ### pruangde — Database & Backend API (4 Module Points)
 
