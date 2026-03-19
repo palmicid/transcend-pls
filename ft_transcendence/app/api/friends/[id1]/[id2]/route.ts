@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server"
 import { friendService } from "@/services/friendService"
 import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/auth/auth-session";
 
 // Accepted friend request
 export async function PATCH(
@@ -9,6 +10,9 @@ export async function PATCH(
 ) {
     const { id1, id2 } = await params
     try {
+        const session = await getSession();
+        if (!session || ![parseInt(id1), parseInt(id2)].includes(session?.userId))
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         const friendRelation = await friendService.checkExistingRelation(parseInt(id1), parseInt(id2));
         if(!friendRelation){
         return NextResponse.json(
@@ -34,6 +38,9 @@ export async function DELETE(
 ) {
     const { id1, id2 } = await params
     try {
+        const session = await getSession();
+        if (!session || ![parseInt(id1), parseInt(id2)].includes(session?.userId))
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         const friendRelation = await friendService.checkExistingRelation(parseInt(id1), parseInt(id2));
         if(!friendRelation){
         return NextResponse.json(
