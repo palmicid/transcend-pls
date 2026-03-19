@@ -136,6 +136,12 @@ npm test:watch        # Run tests in watch mode
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/) — Database system
 - [MinIO Documentation](https://min.io/docs/) — S3-compatible object storage
 - [Nginx Documentation](https://nginx.org/docs/) — Reverse proxy and HTTPS termination
+- [Elasticsearch Documentation](https://www.elastic.co/guide/en/elasticsearch/reference/index.html) — Distributed log storage, indexing, and search engine for centralized logs
+- [Logstash Documentation](https://www.elastic.co/guide/en/logstash/current/index.html) — Log ingestion and transformation pipeline for processing container logs
+- [Kibana Documentation](https://www.elastic.co/guide/en/kibana/current/index.html) — Visualization dashboard for querying and monitoring centralized logs
+- [Docker GELF Logging Driver](https://docs.docker.com/config/containers/logging/gelf/) — Structured log forwarding from Docker containers to Logstash
+- [Elastic ILM Documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-lifecycle-management.html) — Index lifecycle policies for automatic log retention and cleanup
+- [Nginx Reverse Proxy Guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) — Routing Kibana securely under subpaths such as `/kibana`
 
 ### Testing & Quality Assurance
 - [Vitest Documentation](https://vitest.dev/) — Unit testing framework for JavaScript
@@ -275,6 +281,11 @@ npm test:watch        # Run tests in watch mode
 - **MinIO** — S3-compatible object storage for file uploads
 - **Docker + Docker Compose** — Containerization and multi-service orchestration
 - **Nginx** — Reverse proxy, HTTPS termination, and load balancing
+- **Elasticsearch** — Centralized log storage, indexing, and fast querying for distributed services
+- **Logstash** — Log ingestion pipeline for collecting and transforming container logs
+- **Kibana** — Visualization dashboard for monitoring, filtering, and analyzing logs
+- **Docker GELF Logging Driver** — Structured log forwarding from containers into Logstash
+- **Index Lifecycle Management (ILM)** — Automated retention policy for deleting old logs
 - **Make** — Command orchestration for development and production workflows
 
 ### Testing & Quality
@@ -805,10 +816,13 @@ Deployed an **ELK Stack (Elasticsearch, Logstash, Kibana)** via Docker Compose s
 - Implemented advanced friend search with filtering, sorting, and pagination functionality
 - Ensured visual consistency and accessibility across all user-facing interfaces
 
-### scharuka — DevOps & AI Integration (2 Module Points)
+### scharuka — DevOps & AI Integration (5 Module Points)
 
 **Modules Implemented:**
 - Implement a complete LLM system interface (Major, AI, 2 pts)
+- Infrastructure for log management using ELK (Elasticsearch, Logstash, Kibana) (Major, DevOp, 2pts)
+- Server-Side Rendering (SSR) for improved performance and SEO. (Minor, Web, 1pts)
+
 
 **Key Contributions:**
 - Set up Docker-based development environment with multi-container orchestration
