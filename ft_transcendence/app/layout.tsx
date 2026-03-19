@@ -31,7 +31,7 @@ export default function RootLayout({
         <HeartbeatProvider>
           <nav className="p-4 border-b flex gap-4 text-white">
             <Link href="/">Home</Link>
-            <Link href="/llm">AI Assistant</Link>
+            <Link href="/chat">AI Assistant</Link>
             <Link href="/play">Tic-Tac-Toe</Link>
           </nav>
           {children}
