@@ -102,6 +102,33 @@ class RoomManager {
   }
 
   /**
+   * Delete ENDED rooms for the given game type that have **no human players**
+   * left (i.e. zero entries in the RoomPlayer junction table).
+   *
+   * Bot-only slots are tracked on the Room itself (`bot_role`), not in
+   * RoomPlayer, so an ENDED room with `players: []` is effectively abandoned.
+   */
+  async cleanupEndedEmptyRooms(gameType: string): Promise<void> {
+    const endedEmpty = await prisma.room.findMany({
+      where: {
+        game_type: gameType,
+        status: "ENDED",
+        players: { none: {} },
+      },
+      select: { id: true },
+    });
+
+    if (endedEmpty.length === 0) return;
+
+    const ids = endedEmpty.map((r: { id: string }) => r.id);
+    for (const id of ids) {
+      this.rooms.delete(id);
+    }
+
+    await prisma.room.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  /**
    * Create or get an existing room.
    *
    * If the room exists, attaches the broadcaster (if provided) and sets the owner

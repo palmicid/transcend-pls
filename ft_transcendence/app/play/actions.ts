@@ -24,9 +24,14 @@ import { GameRegistry } from "@/lib/game/GameRegistry";
 export async function listLobbyRooms(gameType: string): Promise<RoomInfo[]> {
 	// Fire-and-forget cleanup — we don't want a cleanup failure to block the
 	// lobby from loading, so errors are swallowed after logging.
-	await roomManager.cleanupStaleRooms(gameType).catch((err) =>
-		console.error("[listLobbyRooms] Stale room cleanup failed:", err),
-	);
+	await Promise.all([
+		roomManager.cleanupStaleRooms(gameType).catch((err) =>
+			console.error("[listLobbyRooms] Stale room cleanup failed:", err),
+		),
+		roomManager.cleanupEndedEmptyRooms(gameType).catch((err) =>
+			console.error("[listLobbyRooms] Ended-empty room cleanup failed:", err),
+		),
+	]);
 
 	const rooms = await prisma.room.findMany({
 		where: { game_type: gameType },
