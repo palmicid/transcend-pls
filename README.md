@@ -89,7 +89,7 @@ Our forever ft_transcendence project.
 
 ### Environment Configuration
 
-Copy `.env.example` to `.env.local` and configure:
+Copy `.env.example` to `.env` and configure:
 - Database connection string (PostgreSQL)
 - OAuth credentials (Google 2FA)
 - Ollama API endpoint (for local AI models)
@@ -154,13 +154,11 @@ npm test:watch        # Run tests in watch mode
 - Provides a local, privacy-respecting AI chat interface powered by Ollama running in a Docker container
 - Enables real-time streaming of AI responses to the frontend without external API dependencies
 - Integrated for tasks: conversational chat interface, message history management, and error handling
-- Implemented by **scharuka**
 
 **Game AI Opponent**
 - Uses minimax-based decision trees with configurable depth to make strategic game moves
 - Implements intentional decision variation to simulate human-like (non-perfect) play
 - Adapted to respect game customization options and maintain challenge balance
-- Implemented by **kkaiyawo**
 
 ## Team Information
 
@@ -420,8 +418,8 @@ npm test:watch        # Run tests in watch mode
 | Minor | Web | Server-Side Rendering (SSR) for improved performance and SEO. | 1 pt | scharuka |
 | Minor | Web | Custom-made design system with reusable components | 1 pt | pnamwayk |
 | Minor | Web | Advanced search functionality (filters, sorting, pagination) | 1 pt | pnamwayk |
-| Minor | Accessibility | Support for additional browsers. | 1 pt | ALL |
-| Major | User Management | Standard user management and authentication.| 2 pt| pruangde pjerddee | 
+| Minor | Accessibility | Support for additional browsers. | 1 pt | Everyone |
+| Major | User Management | Standard user management and authentication. | 2 pt| pruangde pjerddee |
 | Minor | User Management | Game statistics and match history | 1 pt | kkaiyawo |
 | Minor | User Management | Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.) | 1 pt | pjerddee |
 | Minor | User Management | Implement a complete 2FA (Two-Factor Authentication) system for the users. | 1 pt | pjerddee |
